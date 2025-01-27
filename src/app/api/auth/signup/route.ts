@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { PrismaClient } from "@prisma/client";
-import bcrypt from "bcryptjs";
+import { hash } from "bcryptjs";
 
 const prisma = new PrismaClient();
 
@@ -8,9 +8,10 @@ export async function POST(request: Request) {
   try {
     const { name, email, password } = await request.json();
 
-    if (!email || !password || !name) {
+    // Validate input
+    if (!name || !email || !password) {
       return NextResponse.json(
-        { message: "Missing required fields" },
+        { error: "Missing required fields" },
         { status: 400 }
       );
     }
@@ -22,13 +23,13 @@ export async function POST(request: Request) {
 
     if (existingUser) {
       return NextResponse.json(
-        { message: "User already exists" },
+        { error: "User with this email already exists" },
         { status: 400 }
       );
     }
 
     // Hash password
-    const hashedPassword = await bcrypt.hash(password, 10);
+    const hashedPassword = await hash(password, 12);
 
     // Create user
     const user = await prisma.user.create({
@@ -36,21 +37,23 @@ export async function POST(request: Request) {
         name,
         email,
         password: hashedPassword,
+        role: "user",
       },
     });
 
-    // Remove password from response
-    const { password: _, ...userWithoutPassword } = user;
-
     return NextResponse.json(
-      { message: "User created successfully", user: userWithoutPassword },
+      {
+        user: {
+          id: user.id,
+          name: user.name,
+          email: user.email,
+          role: user.role,
+        },
+      },
       { status: 201 }
     );
   } catch (error) {
-    console.error("Registration error:", error);
-    return NextResponse.json(
-      { message: "Error creating user" },
-      { status: 500 }
-    );
+    console.error("Signup error:", error);
+    return NextResponse.json({ error: "Error creating user" }, { status: 500 });
   }
 }

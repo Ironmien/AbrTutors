@@ -23,7 +23,7 @@ export async function GET() {
         userEmail: session.user.email,
       },
       orderBy: {
-        preferredDate: "asc",
+        date: "asc",
       },
     });
 
@@ -41,62 +41,98 @@ export async function GET() {
 export async function POST(request: Request) {
   try {
     const session = await getServerSession(authOptions);
+
     if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
     }
 
     const body = await request.json();
     const {
-      package: tutorPackage,
+      date,
+      hour,
+      slotNumber,
+      studentName,
+      package: packageType,
       sessionType,
-      preferredDate,
-      preferredTime,
     } = body;
 
-    if (!tutorPackage || !sessionType || !preferredDate || !preferredTime) {
+    // Validate required fields
+    if (
+      !date ||
+      !hour ||
+      !slotNumber ||
+      !studentName ||
+      !packageType ||
+      !sessionType
+    ) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    // Check if the time slot is available
+    // Check if user has enough credits
+    const user = await prisma.user.findUnique({
+      where: { email: session.user.email },
+      select: { credits: true },
+    });
+
+    if (!user || user.credits < 1) {
+      return NextResponse.json(
+        { error: "Insufficient credits" },
+        { status: 400 }
+      );
+    }
+
+    // Check if slot is available
     const existingBooking = await prisma.booking.findFirst({
       where: {
-        preferredDate: new Date(preferredDate),
-        preferredTime: preferredTime,
-        status: "confirmed",
+        date: new Date(date),
+        hour: hour,
+        slotNumber: slotNumber,
       },
     });
 
     if (existingBooking) {
       return NextResponse.json(
-        { error: "This time slot is already booked" },
+        { error: "This slot is no longer available" },
         { status: 400 }
       );
     }
 
-    // Create the booking
-    const booking = await prisma.booking.create({
-      data: {
-        package: tutorPackage,
-        sessionType,
-        preferredDate: new Date(preferredDate),
-        preferredTime,
-        status: "pending",
-        userEmail: session.user.email,
-        studentName: session.user.name || "Unknown",
-      },
+    // Create booking and deduct credit in a transaction
+    const booking = await prisma.$transaction(async (tx) => {
+      // Create the booking
+      const newBooking = await tx.booking.create({
+        data: {
+          date: new Date(date),
+          hour,
+          slotNumber,
+          studentName,
+          package: packageType,
+          sessionType,
+          userEmail: session.user.email ?? "",
+          status: "confirmed",
+        },
+      });
+
+      // Deduct one credit
+      await tx.user.update({
+        where: { email: session.user.email ?? "" },
+        data: { credits: { decrement: 1 } },
+      });
+
+      return newBooking;
     });
 
-    // Send confirmation email
-    await sendBookingConfirmationEmail(session.user.email, booking);
-
-    return NextResponse.json({ booking });
+    return NextResponse.json(booking);
   } catch (error) {
     console.error("Error creating booking:", error);
     return NextResponse.json(
-      { error: "Error creating booking" },
+      { error: "Failed to create booking" },
       { status: 500 }
     );
   }

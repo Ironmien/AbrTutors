@@ -2,13 +2,15 @@ import { Resend } from "resend";
 
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-interface BookingEmailData {
+export interface BookingEmailData {
   id: string;
+  userEmail: string;
   studentName: string;
-  package: string;
+  date: Date;
+  hour: number;
+  slotNumber: number;
   sessionType: string;
-  preferredDate: Date;
-  preferredTime: string;
+  package: string;
   status: string;
 }
 
@@ -26,7 +28,7 @@ export async function sendBookingConfirmationEmail(
     packagePrices[booking.package as keyof typeof packagePrices] ||
     "Price varies";
 
-  const date = new Date(booking.preferredDate).toLocaleDateString();
+  const date = new Date(booking.date).toLocaleDateString();
 
   try {
     await resend.emails.send({
@@ -45,7 +47,7 @@ export async function sendBookingConfirmationEmail(
             <p><strong>Package:</strong> ${booking.package} (${packagePrice})</p>
             <p><strong>Session Type:</strong> ${booking.sessionType}</p>
             <p><strong>Date:</strong> ${date}</p>
-            <p><strong>Time:</strong> ${booking.preferredTime}</p>
+            <p><strong>Time:</strong> ${booking.hour}:00</p>
             <p><strong>Status:</strong> ${booking.status}</p>
           </div>
           
@@ -65,7 +67,7 @@ export async function sendBookingStatusUpdateEmail(
   userEmail: string,
   booking: BookingEmailData
 ) {
-  const date = new Date(booking.preferredDate).toLocaleDateString();
+  const date = new Date(booking.date).toLocaleDateString();
 
   try {
     await resend.emails.send({
@@ -83,7 +85,7 @@ export async function sendBookingStatusUpdateEmail(
             <p><strong>Package:</strong> ${booking.package}</p>
             <p><strong>Session Type:</strong> ${booking.sessionType}</p>
             <p><strong>Date:</strong> ${date}</p>
-            <p><strong>Time:</strong> ${booking.preferredTime}</p>
+            <p><strong>Time:</strong> ${booking.hour}:00</p>
             <p><strong>New Status:</strong> ${booking.status}</p>
           </div>
 
@@ -103,7 +105,7 @@ export async function sendBookingCancellationEmail(
   userEmail: string,
   booking: BookingEmailData
 ) {
-  const date = new Date(booking.preferredDate).toLocaleDateString();
+  const date = new Date(booking.date).toLocaleDateString();
 
   try {
     await resend.emails.send({
@@ -121,7 +123,7 @@ export async function sendBookingCancellationEmail(
             <p><strong>Package:</strong> ${booking.package}</p>
             <p><strong>Session Type:</strong> ${booking.sessionType}</p>
             <p><strong>Date:</strong> ${date}</p>
-            <p><strong>Time:</strong> ${booking.preferredTime}</p>
+            <p><strong>Time:</strong> ${booking.hour}:00</p>
           </div>
 
           <p>If you'd like to book another session, please visit our website or contact us directly.</p>

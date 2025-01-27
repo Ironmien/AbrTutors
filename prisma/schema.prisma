@@ -45,11 +45,15 @@ model User {
   image         String?
   password      String?
   role          String    @default("user")
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  credits       Int       @default(0)
+  packageType   String    @default("Standard")
   accounts      Account[]
   sessions      Session[]
   bookings      Booking[]
+  payments      Payment[]
+  creditHistory CreditHistory[]
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
 }
 
 model VerificationToken {
@@ -61,18 +65,50 @@ model VerificationToken {
 }
 
 model Booking {
-  id            String   @id @default(cuid())
-  package       String
-  sessionType   String
-  preferredDate DateTime
-  preferredTime String
-  status        String   @default("pending")
-  userEmail     String
-  studentName   String
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
-  user          User     @relation(fields: [userEmail], references: [email])
+  id          String   @id @default(cuid())
+  date        DateTime
+  hour        Int
+  slotNumber  Int
+  studentName String
+  package     String
+  sessionType String
+  status      String   @default("pending")
+  userEmail   String
+  user        User     @relation(fields: [userEmail], references: [email])
+  payment     Payment? @relation(fields: [paymentId], references: [id])
+  paymentId   String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
 
   @@index([userEmail])
-  @@index([preferredDate])
+  @@index([date])
+}
+
+model Payment {
+  id        String    @id @default(cuid())
+  amount    Float
+  status    String    @default("pending")
+  type      String
+  userEmail String
+  user      User      @relation(fields: [userEmail], references: [email])
+  bookings  Booking[]
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+
+  @@index([userEmail])
+}
+
+model CreditHistory {
+  id        String   @id @default(cuid())
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
+  amount    Int
+  category  String   // sponsor, reward, cancellation, loyalty, special
+  reason    String
+  type      String   // CREDIT or DEBIT
+  adminId   String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
 } 

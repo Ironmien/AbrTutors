@@ -1,51 +1,96 @@
 "use client";
 
-import React, { useState } from "react";
+import React from "react";
+import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useRouter, useSearchParams } from "next/navigation";
-import Header from "../components/Header";
-import Footer from "../components/Footer";
+import Header from "@/components/Header";
+import Footer from "@/components/Footer";
 
-export default function BookSession() {
+interface TimeSlot {
+  hour: number;
+  availableSlots: number;
+  availableSlotNumbers: number[];
+}
+
+interface AvailabilityResponse {
+  availability: TimeSlot[];
+  error?: string;
+}
+
+const BookingPage = () => {
   const { data: session } = useSession();
   const router = useRouter();
-  const searchParams = useSearchParams();
 
-  const [formData, setFormData] = useState({
-    package: searchParams.get("package") || "single",
-    sessionType: "in-person",
-    preferredDate: searchParams.get("date") || "",
-    preferredTime: searchParams.get("time") || "",
-    studentName: session?.user?.name || "",
-    additionalNotes: "",
-  });
+  const [credits, setCredits] = useState<number>(0);
+  const [selectedDate, setSelectedDate] = useState<string>("");
+  const [selectedHour, setSelectedHour] = useState<number | null>(null);
+  const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
+  const [availability, setAvailability] = useState<TimeSlot[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string>("");
+  const [studentName, setStudentName] = useState("");
+  const [package_, setPackage] = useState("single");
+  const [sessionType, setSessionType] = useState("online");
 
-  const [status, setStatus] = useState<{
-    type: "success" | "error" | null;
-    message: string;
-  }>({ type: null, message: "" });
+  useEffect(() => {
+    if (session?.user?.email) {
+      fetchUserCredits();
+    }
+  }, [session]);
 
-  const packages = [
-    {
-      id: "single",
-      name: "Single Session",
-      description: "One-time tutoring session (R200)",
-    },
-    {
-      id: "weekly",
-      name: "Weekly Package",
-      description: "Regular weekly sessions (R600/month)",
-    },
-    {
-      id: "monthly",
-      name: "Monthly Package",
-      description: "Comprehensive monthly package (R1000/month)",
-    },
-  ];
+  useEffect(() => {
+    if (selectedDate) {
+      fetchAvailability();
+    }
+  }, [selectedDate]);
+
+  const fetchUserCredits = async () => {
+    try {
+      const response = await fetch("/api/credits");
+      const data = await response.json();
+
+      if (response.ok) {
+        setCredits(data.credits);
+      } else {
+        setError(data.error || "Failed to fetch credits");
+      }
+    } catch (error) {
+      setError("Failed to fetch credits");
+    }
+  };
+
+  const fetchAvailability = async () => {
+    try {
+      const response = await fetch(`/api/availability?date=${selectedDate}`);
+      const data: AvailabilityResponse = await response.json();
+
+      if (response.ok) {
+        setAvailability(data.availability);
+      } else {
+        setError(data.error || "Failed to fetch availability");
+      }
+    } catch (error) {
+      setError("Failed to fetch availability");
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStatus({ type: null, message: "" });
+    setLoading(true);
+    setError("");
+
+    if (credits < 1) {
+      setError("You don't have enough credits to book a session");
+      setLoading(false);
+      return;
+    }
+
+    if (!selectedDate || !selectedHour || !selectedSlot) {
+      setError("Please select a date and time slot");
+      setLoading(false);
+      return;
+    }
 
     try {
       const response = await fetch("/api/bookings", {
@@ -53,200 +98,168 @@ export default function BookSession() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          date: selectedDate,
+          hour: selectedHour,
+          slotNumber: selectedSlot,
+          studentName,
+          package: package_,
+          sessionType,
+        }),
       });
 
       const data = await response.json();
 
       if (response.ok) {
-        setStatus({
-          type: "success",
-          message: "Booking successful! Redirecting to dashboard...",
-        });
-        // Redirect to dashboard after successful booking
-        setTimeout(() => router.push("/dashboard"), 2000);
+        router.push("/dashboard?booking=success");
       } else {
-        setStatus({
-          type: "error",
-          message: data.error || "Failed to create booking. Please try again.",
-        });
+        setError(data.error || "Failed to book session");
       }
     } catch (error) {
-      setStatus({
-        type: "error",
-        message: "An error occurred. Please try again later.",
-      });
+      setError("Failed to book session");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<
-      HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement
-    >
-  ) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
-
   if (!session) {
-    router.push("/auth/signin");
+    router.push("/login?callbackUrl=/book");
     return null;
   }
 
   return (
-    <>
+    <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="min-h-screen pt-20 bg-gray-50">
-        <div className="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Book a Session</h1>
-            <p className="mt-2 text-gray-600">
-              Schedule your tutoring session with Math Mastery
+      <main className="flex-grow container mx-auto px-4 py-8">
+        <h1 className="text-3xl font-bold mb-8">Book a Session</h1>
+
+        <div className="bg-white rounded-lg shadow-md p-6 max-w-2xl mx-auto">
+          <div className="mb-6">
+            <p className="text-lg">
+              Available Credits: <span className="font-bold">{credits}</span>
             </p>
+            {credits < 1 && (
+              <p className="text-red-500 mt-2">
+                You need at least 1 credit to book a session. Please purchase
+                credits first.
+              </p>
+            )}
           </div>
 
-          <div className="bg-white shadow-lg rounded-lg p-6">
-            <form onSubmit={handleSubmit} className="space-y-6">
-              {status.message && (
-                <div
-                  className={`p-4 rounded-md ${
-                    status.type === "success"
-                      ? "bg-green-50 text-green-800"
-                      : "bg-red-50 text-red-800"
-                  }`}
-                >
-                  {status.message}
-                </div>
-              )}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Student Name
+              </label>
+              <input
+                type="text"
+                value={studentName}
+                onChange={(e) => setStudentName(e.target.value)}
+                required
+                className="w-full px-3 py-2 border rounded-md"
+                placeholder="Enter student name"
+              />
+            </div>
 
-              {/* Package Selection */}
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Package
+              </label>
+              <select
+                value={package_}
+                onChange={(e) => setPackage(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md"
+              >
+                <option value="single">Single Session</option>
+                <option value="package5">5 Sessions Package</option>
+                <option value="package10">10 Sessions Package</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Session Type
+              </label>
+              <select
+                value={sessionType}
+                onChange={(e) => setSessionType(e.target.value)}
+                className="w-full px-3 py-2 border rounded-md"
+              >
+                <option value="online">Online</option>
+                <option value="inPerson">In Person</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Date
+              </label>
+              <input
+                type="date"
+                value={selectedDate}
+                onChange={(e) => setSelectedDate(e.target.value)}
+                required
+                min={new Date().toISOString().split("T")[0]}
+                className="w-full px-3 py-2 border rounded-md"
+              />
+            </div>
+
+            {selectedDate && availability.length > 0 && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-4">
-                  Select Package
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Available Time Slots
                 </label>
-                <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-                  {packages.map((pkg) => (
-                    <div key={pkg.id}>
-                      <input
-                        type="radio"
-                        name="package"
-                        id={pkg.id}
-                        value={pkg.id}
-                        checked={formData.package === pkg.id}
-                        onChange={handleChange}
-                        className="sr-only peer"
-                      />
-                      <label
-                        htmlFor={pkg.id}
-                        className="flex flex-col p-4 border rounded-lg cursor-pointer peer-checked:border-blue-500 peer-checked:bg-blue-50 hover:bg-gray-50"
-                      >
-                        <span className="font-medium text-gray-900">
-                          {pkg.name}
-                        </span>
-                        <span className="text-sm text-gray-500">
-                          {pkg.description}
-                        </span>
-                      </label>
+                <div className="grid grid-cols-2 gap-4">
+                  {availability.map((slot) => (
+                    <div key={slot.hour} className="border rounded-md p-4">
+                      <p className="font-medium mb-2">
+                        {slot.hour}:00 - {slot.availableSlots} slots available
+                      </p>
+                      <div className="flex gap-2">
+                        {slot.availableSlotNumbers.map((slotNum) => (
+                          <button
+                            key={slotNum}
+                            type="button"
+                            onClick={() => {
+                              setSelectedHour(slot.hour);
+                              setSelectedSlot(slotNum);
+                            }}
+                            className={`px-3 py-1 rounded-md ${
+                              selectedHour === slot.hour &&
+                              selectedSlot === slotNum
+                                ? "bg-blue-500 text-white"
+                                : "bg-gray-100 hover:bg-gray-200"
+                            }`}
+                          >
+                            Slot {slotNum}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   ))}
                 </div>
               </div>
+            )}
 
-              {/* Session Type */}
-              <div>
-                <label
-                  htmlFor="sessionType"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Session Type
-                </label>
-                <select
-                  id="sessionType"
-                  name="sessionType"
-                  value={formData.sessionType}
-                  onChange={handleChange}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                >
-                  <option value="in-person">In-Person</option>
-                  <option value="online">Online</option>
-                </select>
-              </div>
+            {error && <div className="text-red-500">{error}</div>}
 
-              {/* Date and Time */}
-              <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                <div>
-                  <label
-                    htmlFor="preferredDate"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Preferred Date
-                  </label>
-                  <input
-                    type="date"
-                    name="preferredDate"
-                    id="preferredDate"
-                    value={formData.preferredDate}
-                    onChange={handleChange}
-                    required
-                    min={new Date().toISOString().split("T")[0]}
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  />
-                </div>
-
-                <div>
-                  <label
-                    htmlFor="preferredTime"
-                    className="block text-sm font-medium text-gray-700"
-                  >
-                    Preferred Time
-                  </label>
-                  <input
-                    type="time"
-                    name="preferredTime"
-                    id="preferredTime"
-                    value={formData.preferredTime}
-                    onChange={handleChange}
-                    required
-                    min="09:00"
-                    max="17:00"
-                    step="1800"
-                    className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                  />
-                </div>
-              </div>
-
-              {/* Additional Notes */}
-              <div>
-                <label
-                  htmlFor="additionalNotes"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Additional Notes (Optional)
-                </label>
-                <textarea
-                  name="additionalNotes"
-                  id="additionalNotes"
-                  rows={3}
-                  value={formData.additionalNotes}
-                  onChange={handleChange}
-                  placeholder="Any specific topics you'd like to cover or other requirements"
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                ></textarea>
-              </div>
-
-              <button
-                type="submit"
-                className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-              >
-                Confirm Booking
-              </button>
-            </form>
-          </div>
+            <button
+              type="submit"
+              disabled={loading || credits < 1}
+              className={`w-full py-3 px-4 rounded-md text-white font-medium ${
+                loading || credits < 1
+                  ? "bg-gray-400 cursor-not-allowed"
+                  : "bg-blue-500 hover:bg-blue-600"
+              }`}
+            >
+              {loading ? "Booking..." : "Book Session"}
+            </button>
+          </form>
         </div>
       </main>
       <Footer />
-    </>
+    </div>
   );
-}
+};
+
+export default BookingPage;

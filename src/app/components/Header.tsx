@@ -3,9 +3,11 @@
 import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
+import { useSession, signOut } from "next-auth/react";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
+  const { data: session } = useSession();
 
   return (
     <header className="bg-amber-50 shadow-sm fixed w-full top-0 z-50">
@@ -46,12 +48,29 @@ export default function Header() {
             >
               Contact
             </Link>
-            <Link
-              href="/book"
-              className="bg-amber-700 text-white px-4 py-2 rounded-md hover:bg-amber-800"
-            >
-              Book a Session
-            </Link>
+            {session ? (
+              <>
+                <Link
+                  href="/book"
+                  className="bg-amber-700 text-white px-4 py-2 rounded-md hover:bg-amber-800"
+                >
+                  Book a Session
+                </Link>
+                <button
+                  onClick={() => signOut({ callbackUrl: "/" })}
+                  className="text-gray-700 hover:text-amber-800"
+                >
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/login"
+                className="text-gray-700 hover:text-amber-800"
+              >
+                Sign In
+              </Link>
+            )}
           </div>
 
           {/* Mobile menu button */}
@@ -122,12 +141,29 @@ export default function Header() {
             >
               Contact
             </Link>
-            <Link
-              href="/book"
-              className="block px-3 py-2 bg-amber-700 text-white rounded-md hover:bg-amber-800"
-            >
-              Book a Session
-            </Link>
+            {session ? (
+              <>
+                <Link
+                  href="/book"
+                  className="block px-3 py-2 bg-amber-700 text-white rounded-md hover:bg-amber-800"
+                >
+                  Book a Session
+                </Link>
+                <button
+                  onClick={() => signOut({ callbackUrl: "/" })}
+                  className="block px-3 py-2 text-gray-700 hover:text-amber-800"
+                >
+                  Sign Out
+                </button>
+              </>
+            ) : (
+              <Link
+                href="/login"
+                className="block px-3 py-2 text-gray-700 hover:text-amber-800"
+              >
+                Sign In
+              </Link>
+            )}
           </div>
         </div>
       </nav>

@@ -1,215 +1,184 @@
 "use client";
 
-import React from "react";
-import { useSession } from "next-auth/react";
-import { useEffect, useState } from "react";
-import Header from "../components/Header";
-import Footer from "../components/Footer";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
+import Header from "../../components/Header";
+import Footer from "../../components/Footer";
 
 interface Booking {
   id: string;
-  package: string;
+  date: string;
+  hour: number;
+  slotNumber: number;
   studentName: string;
+  package: string;
   sessionType: string;
-  preferredDate: string;
-  preferredTime: string;
   status: string;
 }
 
-export default function Dashboard() {
+const DashboardPage = () => {
   const { data: session } = useSession();
   const router = useRouter();
   const [bookings, setBookings] = useState<Booking[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
+  const [credits, setCredits] = useState(0);
 
   useEffect(() => {
-    const fetchBookings = async () => {
-      try {
-        const response = await fetch("/api/bookings");
-        if (response.ok) {
-          const data = await response.json();
-          setBookings(data.bookings);
-        }
-      } catch (error) {
-        console.error("Error fetching bookings:", error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    if (session) {
+    if (session?.user?.email) {
       fetchBookings();
+      fetchCredits();
     }
   }, [session]);
 
-  const getStatusColor = (status: string) => {
-    switch (status.toLowerCase()) {
-      case "confirmed":
-        return "bg-green-100 text-green-800";
-      case "pending":
-        return "bg-yellow-100 text-yellow-800";
-      case "cancelled":
-        return "bg-red-100 text-red-800";
-      default:
-        return "bg-gray-100 text-gray-800";
+  const fetchBookings = async () => {
+    try {
+      const response = await fetch("/api/bookings");
+      const data = await response.json();
+
+      if (response.ok) {
+        setBookings(data.bookings);
+      } else {
+        setError(data.error || "Failed to fetch bookings");
+      }
+    } catch (error) {
+      setError("Failed to fetch bookings");
+    } finally {
+      setLoading(false);
     }
   };
 
+  const fetchCredits = async () => {
+    try {
+      const response = await fetch("/api/credits");
+      const data = await response.json();
+
+      if (response.ok) {
+        setCredits(data.credits);
+      }
+    } catch (error) {
+      console.error("Error fetching credits:", error);
+    }
+  };
+
+  const handleCancelBooking = async (bookingId: string) => {
+    if (!confirm("Are you sure you want to cancel this booking?")) {
+      return;
+    }
+
+    try {
+      const response = await fetch(`/api/bookings/${bookingId}`, {
+        method: "DELETE",
+      });
+
+      if (response.ok) {
+        // Refresh bookings and credits after cancellation
+        fetchBookings();
+        fetchCredits();
+      } else {
+        const data = await response.json();
+        setError(data.error || "Failed to cancel booking");
+      }
+    } catch (error) {
+      setError("Failed to cancel booking");
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString("en-US", {
+      weekday: "long",
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
+  const formatTime = (hour: number, slotNumber: number) => {
+    return `${hour}:${slotNumber === 1 ? "00" : (slotNumber - 1) * 15} ${
+      hour >= 12 ? "PM" : "AM"
+    }`;
+  };
+
   if (!session) {
-    router.push("/auth/signin");
+    router.push("/login?callbackUrl=/dashboard");
     return null;
   }
 
   return (
-    <>
+    <div className="min-h-screen flex flex-col">
       <Header />
-      <main className="min-h-screen pt-20 bg-gray-50">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p className="mt-2 text-gray-600">
-              Welcome back, {session.user?.name || "Student"}
-            </p>
-          </div>
-
-          {/* Quick Actions */}
-          <div className="mb-8">
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
-              <button
-                onClick={() => router.push("/book")}
-                className="p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
-              >
-                <h3 className="text-lg font-medium text-gray-900">
-                  Book New Session
-                </h3>
-                <p className="mt-1 text-gray-600">
-                  Schedule your next tutoring session
-                </p>
-              </button>
-
-              <button
-                onClick={() => router.push("/calendar")}
-                className="p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
-              >
-                <h3 className="text-lg font-medium text-gray-900">
-                  View Calendar
-                </h3>
-                <p className="mt-1 text-gray-600">Check available time slots</p>
-              </button>
-
-              <button
-                onClick={() => router.push("/profile")}
-                className="p-4 bg-white rounded-lg shadow hover:shadow-md transition-shadow"
-              >
-                <h3 className="text-lg font-medium text-gray-900">
-                  Profile Settings
-                </h3>
-                <p className="mt-1 text-gray-600">Update your information</p>
-              </button>
-            </div>
-          </div>
-
-          {/* Upcoming Sessions */}
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <div className="px-4 py-5 sm:px-6 border-b border-gray-200">
-              <h2 className="text-xl font-semibold text-gray-900">
-                Your Sessions
-              </h2>
-            </div>
-
-            {loading ? (
-              <div className="p-4 text-center text-gray-600">Loading...</div>
-            ) : bookings.length === 0 ? (
-              <div className="p-4 text-center text-gray-600">
-                No sessions booked yet.{" "}
-                <button
-                  onClick={() => router.push("/book")}
-                  className="text-blue-600 hover:text-blue-500"
-                >
-                  Book your first session
-                </button>
-              </div>
-            ) : (
-              <div className="overflow-x-auto">
-                <table className="min-w-full divide-y divide-gray-200">
-                  <thead className="bg-gray-50">
-                    <tr>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Student
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Package
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Date & Time
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Type
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Status
-                      </th>
-                      <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                        Actions
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody className="bg-white divide-y divide-gray-200">
-                    {bookings.map((booking) => (
-                      <tr key={booking.id}>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {booking.studentName}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {booking.package}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {new Date(booking.preferredDate).toLocaleDateString()}{" "}
-                          at {booking.preferredTime}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          {booking.sessionType}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <span
-                            className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(
-                              booking.status
-                            )}`}
-                          >
-                            {booking.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
-                          <button
-                            onClick={() =>
-                              router.push(`/booking/${booking.id}`)
-                            }
-                            className="text-blue-600 hover:text-blue-900 mr-4"
-                          >
-                            View
-                          </button>
-                          {booking.status === "pending" && (
-                            <button
-                              onClick={() => {
-                                /* Add cancel handler */
-                              }}
-                              className="text-red-600 hover:text-red-900"
-                            >
-                              Cancel
-                            </button>
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            )}
+      <main className="flex-grow container mx-auto px-4 py-8">
+        <div className="flex justify-between items-center mb-8">
+          <h1 className="text-3xl font-bold">My Dashboard</h1>
+          <div className="text-lg">
+            Available Credits: <span className="font-bold">{credits}</span>
           </div>
         </div>
+
+        {error && <div className="text-red-500 mb-4">{error}</div>}
+
+        {loading ? (
+          <div className="text-center">Loading...</div>
+        ) : bookings.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-gray-600 mb-4">You have no bookings yet.</p>
+            <button
+              onClick={() => router.push("/book")}
+              className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md transition-colors"
+            >
+              Book a Session
+            </button>
+          </div>
+        ) : (
+          <div className="grid gap-6">
+            {bookings.map((booking) => (
+              <div
+                key={booking.id}
+                className="bg-white rounded-lg shadow-md p-6"
+              >
+                <div className="flex justify-between items-start">
+                  <div>
+                    <h3 className="text-xl font-semibold mb-2">
+                      {booking.studentName}
+                    </h3>
+                    <p className="text-gray-600">
+                      {formatDate(booking.date)} at{" "}
+                      {formatTime(booking.hour, booking.slotNumber)}
+                    </p>
+                    <p className="text-gray-600">
+                      Package: {booking.package} | Type: {booking.sessionType}
+                    </p>
+                    <p
+                      className={`mt-2 font-medium ${
+                        booking.status === "confirmed"
+                          ? "text-green-600"
+                          : booking.status === "cancelled"
+                          ? "text-red-600"
+                          : "text-yellow-600"
+                      }`}
+                    >
+                      Status: {booking.status}
+                    </p>
+                  </div>
+                  {booking.status !== "cancelled" && (
+                    <button
+                      onClick={() => handleCancelBooking(booking.id)}
+                      className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md transition-colors"
+                    >
+                      Cancel
+                    </button>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </main>
       <Footer />
-    </>
+    </div>
   );
-}
+};
+
+export default DashboardPage;

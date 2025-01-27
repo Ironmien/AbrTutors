@@ -11,13 +11,14 @@ export default function Footer() {
           <div className="col-span-1 md:col-span-2">
             <h3 className="text-xl font-bold text-amber-400">ABR TUTORS</h3>
             <p className="mt-4 text-gray-300">
-              Empowering students to excel in mathematics through personalized
+              Empowering students to excel in <br />
+              mathematics through personalized <br />
               tutoring and dedicated support.
             </p>
             <p className="mt-4 text-gray-300">
-              137 Kempston Road
+              142 Govan Mbeki Avenue
               <br />
-              Korsten, Port Elizabeth
+              Qgebera
               <br />
               South Africa
             </p>

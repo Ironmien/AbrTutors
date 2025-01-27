@@ -78,8 +78,8 @@ export default function Home() {
                     Physical Location
                   </div>
                   <p className="mt-2 text-base text-gray-500">
-                    Visit us at 137 Kempston Road, Korsten Port Elizabeth for
-                    in-person sessions in our modern learning environment.
+                    Visit us at 142 Govan Mbeki Avenue, Qgebera for in-person
+                    sessions in our modern learning environment.
                   </p>
                 </div>
                 <div className="relative">
@@ -230,15 +230,15 @@ export default function Home() {
                     Our Location
                   </h3>
                   <p className="mt-2 text-base text-gray-500">
-                    137 Kempston Road
+                    142 Govan Mbeki Avenue
                     <br />
-                    Korsten, Port Elizabeth
+                    Qgebera
                     <br />
                     South Africa
                   </p>
                   <div className="mt-4">
                     <a
-                      href="https://www.google.com/maps/search/?api=1&query=137+Kempston+Road+Korsten+Port+Elizabeth"
+                      href="https://www.google.com/maps/search/?api=1&query=142+Govan+Mbeki+Avenue+Qgebera"
                       target="_blank"
                       rel="noopener noreferrer"
                       className="text-amber-700 hover:text-amber-800"
@@ -255,7 +255,7 @@ export default function Home() {
                   <dl className="mt-2 text-base text-gray-500">
                     <div className="mt-1">
                       <dt className="sr-only">Email</dt>
-                      <dd>info@mathmastery.co.za</dd>
+                      <dd>admin@abrtutors.co.za</dd>
                     </div>
                     <div className="mt-1">
                       <dt className="sr-only">Phone number</dt>
