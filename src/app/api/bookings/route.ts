@@ -1,29 +1,71 @@
+"use server";
+
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient, Prisma } from "@prisma/client";
 import { authOptions } from "../auth/[...nextauth]/route";
 import {
   sendBookingConfirmationEmail,
   sendBookingStatusUpdateEmail,
   sendBookingCancellationEmail,
 } from "@/lib/email";
+import { Resend } from "resend";
+import prisma from "@/lib/prisma";
 
-const prisma = new PrismaClient();
+const resend = new Resend(process.env.RESEND_API_KEY);
+
+type PackageType = "single" | "standard" | "premium";
+
+const PACKAGE_CREDITS: Record<PackageType, number> = {
+  single: 1,
+  standard: 4,
+  premium: 8,
+};
 
 // GET /api/bookings - Get all bookings for the current user
-export async function GET() {
+export async function GET(request: Request) {
   try {
     const session = await getServerSession(authOptions);
+
     if (!session?.user?.email) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+      return NextResponse.json(
+        { error: "Authentication required" },
+        { status: 401 }
+      );
+    }
+
+    const { searchParams } = new URL(request.url);
+    const date = searchParams.get("date");
+    const learnerId = searchParams.get("learnerId");
+
+    const whereClause: Prisma.BookingWhereInput = {
+      userEmail: session.user.email,
+    };
+
+    if (date) {
+      const startDate = new Date(date);
+      startDate.setHours(0, 0, 0, 0);
+      const endDate = new Date(date);
+      endDate.setHours(23, 59, 59, 999);
+
+      whereClause.date = {
+        gte: startDate,
+        lte: endDate,
+      };
+    }
+
+    if (learnerId) {
+      whereClause.learnerId = learnerId;
     }
 
     const bookings = await prisma.booking.findMany({
-      where: {
-        userEmail: session.user.email,
+      where: whereClause,
+      include: {
+        learner: true,
+        user: true,
       },
       orderBy: {
-        date: "asc",
+        date: "desc",
       },
     });
 
@@ -38,33 +80,31 @@ export async function GET() {
 }
 
 // POST /api/bookings - Create a new booking
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
     const session = await getServerSession(authOptions);
+    const userId = session?.user?.id;
+    const userEmail = session?.user?.email;
 
-    if (!session?.user?.email) {
-      return NextResponse.json(
-        { error: "Authentication required" },
-        { status: 401 }
-      );
+    if (!userId || !userEmail) {
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
-    const body = await request.json();
     const {
       date,
       hour,
       slotNumber,
-      studentName,
+      learnerId,
       package: packageType,
       sessionType,
-    } = body;
+    } = await req.json();
 
     // Validate required fields
     if (
       !date ||
       !hour ||
       !slotNumber ||
-      !studentName ||
+      !learnerId ||
       !packageType ||
       !sessionType
     ) {
@@ -74,16 +114,25 @@ export async function POST(request: Request) {
       );
     }
 
-    // Check if user has enough credits
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: { credits: true },
+    // Get the learner and verify ownership
+    const learner = await prisma.learner.findUnique({
+      where: { id: learnerId },
+      select: {
+        id: true,
+        name: true,
+        parentId: true,
+      },
     });
 
-    if (!user || user.credits < 1) {
+    if (!learner) {
+      return NextResponse.json({ error: "Learner not found" }, { status: 404 });
+    }
+
+    // Check if user is authorized to book for this learner
+    if (learner.parentId !== userId) {
       return NextResponse.json(
-        { error: "Insufficient credits" },
-        { status: 400 }
+        { error: "Unauthorized to book for this learner" },
+        { status: 403 }
       );
     }
 
@@ -98,12 +147,28 @@ export async function POST(request: Request) {
 
     if (existingBooking) {
       return NextResponse.json(
-        { error: "This slot is no longer available" },
+        { error: "This slot is already booked" },
         { status: 400 }
       );
     }
 
-    // Create booking and deduct credit in a transaction
+    // Calculate credits needed based on package
+    const creditsNeeded = PACKAGE_CREDITS[packageType as PackageType] || 0;
+
+    // Check if user has enough credits
+    const user = await prisma.user.findUnique({
+      where: { email: userEmail },
+      select: { credits: true },
+    });
+
+    if (!user || user.credits < creditsNeeded) {
+      return NextResponse.json(
+        { error: "Insufficient credits" },
+        { status: 400 }
+      );
+    }
+
+    // Create booking and deduct credits in a transaction
     const booking = await prisma.$transaction(async (tx) => {
       // Create the booking
       const newBooking = await tx.booking.create({
@@ -111,18 +176,30 @@ export async function POST(request: Request) {
           date: new Date(date),
           hour,
           slotNumber,
-          studentName,
           package: packageType,
           sessionType,
-          userEmail: session.user.email ?? "",
+          studentName: learner.name,
+          learner: { connect: { id: learnerId } },
+          user: { connect: { email: userEmail } },
           status: "confirmed",
         },
       });
 
-      // Deduct one credit
+      // Deduct credits
       await tx.user.update({
-        where: { email: session.user.email ?? "" },
-        data: { credits: { decrement: 1 } },
+        where: { email: userEmail },
+        data: { credits: { decrement: creditsNeeded } },
+      });
+
+      // Create credit history entry
+      await tx.creditHistory.create({
+        data: {
+          userId,
+          amount: -creditsNeeded,
+          type: "debit",
+          category: "booking",
+          reason: `Booking for ${packageType} package`,
+        },
       });
 
       return newBooking;
@@ -130,7 +207,7 @@ export async function POST(request: Request) {
 
     return NextResponse.json(booking);
   } catch (error) {
-    console.error("Error creating booking:", error);
+    console.error("Booking error:", error);
     return NextResponse.json(
       { error: "Failed to create booking" },
       { status: 500 }

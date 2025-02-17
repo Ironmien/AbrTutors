@@ -17,6 +17,9 @@ import {
   X,
   LucideIcon,
   Gift,
+  LayoutDashboard,
+  DollarSign,
+  Clock,
 } from "lucide-react";
 
 interface NavItem {
@@ -25,14 +28,37 @@ interface NavItem {
   icon: LucideIcon;
 }
 
-const navigation: NavItem[] = [
-  { name: "Dashboard", href: "/admin/dashboard", icon: BarChart3 },
-  { name: "Bookings", href: "/admin/bookings", icon: CalendarDays },
-  { name: "Clients", href: "/admin/clients", icon: Users },
-  { name: "Learners", href: "/admin/learners", icon: GraduationCap },
-  { name: "Credits", href: "/admin/credits", icon: Gift },
-  { name: "Payments", href: "/admin/payments", icon: CreditCard },
-  { name: "Settings", href: "/admin/settings", icon: Settings },
+const navItems: NavItem[] = [
+  {
+    name: "Dashboard",
+    href: "/admin/dashboard",
+    icon: LayoutDashboard,
+  },
+  {
+    name: "Bookings",
+    href: "/admin/bookings",
+    icon: CalendarDays,
+  },
+  {
+    name: "Sessions",
+    href: "/admin/sessions",
+    icon: CreditCard,
+  },
+  {
+    name: "Learners",
+    href: "/admin/learners",
+    icon: GraduationCap,
+  },
+  {
+    name: "Payments",
+    href: "/admin/payments",
+    icon: DollarSign,
+  },
+  {
+    name: "Availability",
+    href: "/admin/availability",
+    icon: Clock,
+  },
 ];
 
 export default function AdminLayout({
@@ -73,7 +99,7 @@ export default function AdminLayout({
             </div>
             <div className="mt-5 h-0 flex-1 overflow-y-auto">
               <nav className="space-y-1 px-2">
-                {navigation.map((item) => {
+                {navItems.map((item) => {
                   const isActive = pathname === item.href;
                   return (
                     <Link
@@ -111,7 +137,7 @@ export default function AdminLayout({
           </div>
           <div className="mt-5 flex flex-grow flex-col">
             <nav className="flex-1 space-y-1 px-2 pb-4">
-              {navigation.map((item) => {
+              {navItems.map((item) => {
                 const isActive = pathname === item.href;
                 return (
                   <Link

@@ -1,6 +1,3 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
 generator client {
   provider = "prisma-client-js"
 }
@@ -16,15 +13,14 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
-
-  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user              User    @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@unique([provider, providerAccountId])
 }
@@ -38,22 +34,29 @@ model Session {
 }
 
 model User {
-  id            String    @id @default(cuid())
-  name          String?
-  email         String?   @unique
-  emailVerified DateTime?
-  image         String?
-  password      String?
-  role          String    @default("user")
-  credits       Int       @default(0)
-  packageType   String    @default("Standard")
-  accounts      Account[]
-  sessions      Session[]
-  bookings      Booking[]
-  payments      Payment[]
-  creditHistory CreditHistory[]
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  id                String           @id @default(cuid())
+  name              String?
+  email             String?          @unique
+  emailVerified     DateTime?
+  image             String?
+  password          String?
+  role              Role             @default(user)
+  userType          UserType         @default(parent)
+  availableSessions Int              @default(0)
+  packageType       String           @default("Standard")
+  phone             String?
+  address           String?
+  city              String?
+  postcode          String?
+  profileComplete   Boolean          @default(false)
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+  accounts          Account[]
+  bookings          Booking[]
+  sessionHistory    SessionHistory[]
+  learners          Learner[]
+  payments          Payment[]
+  sessions          Session[]
 }
 
 model VerificationToken {
@@ -65,23 +68,24 @@ model VerificationToken {
 }
 
 model Booking {
-  id          String   @id @default(cuid())
+  id          String    @id @default(cuid())
   date        DateTime
   hour        Int
   slotNumber  Int
   studentName String
   package     String
   sessionType String
-  status      String   @default("pending")
+  status      String    @default("pending")
   userEmail   String
-  user        User     @relation(fields: [userEmail], references: [email])
-  payment     Payment? @relation(fields: [paymentId], references: [id])
-  paymentId   String?
-  createdAt   DateTime @default(now())
-  updatedAt   DateTime @updatedAt
+  learnerId   String
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  learner     Learner   @relation(fields: [learnerId], references: [id])
+  user        User      @relation(fields: [userEmail], references: [email])
+  Payment     Payment[] @relation("BookingToPayment")
 
   @@index([userEmail])
-  @@index([date])
+  @@index([learnerId])
 }
 
 model Payment {
@@ -90,25 +94,83 @@ model Payment {
   status    String    @default("pending")
   type      String
   userEmail String
-  user      User      @relation(fields: [userEmail], references: [email])
-  bookings  Booking[]
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+  user      User      @relation(fields: [userEmail], references: [email])
+  bookings  Booking[] @relation("BookingToPayment")
 
   @@index([userEmail])
 }
 
-model CreditHistory {
+model Learner {
+  id          String    @id @default(cuid())
+  name        String
+  email       String?   @unique
+  password    String?
+  dateOfBirth DateTime?
+  schoolYear  Int?
+  subjects    String[]
+  isAdult     Boolean   @default(false)
+  parentId    String?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  bookings    Booking[]
+  parent      User?     @relation(fields: [parentId], references: [id])
+
+  @@index([parentId])
+}
+
+model SessionAvailability {
+  id        String   @id @default(cuid())
+  dayOfWeek Int
+  startTime Int
+  endTime   Int
+  maxSlots  Int      @default(3)
+  isActive  Boolean  @default(true)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model BlockedDate {
+  id        String   @id @default(cuid())
+  date      DateTime
+  reason    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model CustomSessionTime {
+  id        String   @id @default(cuid())
+  date      DateTime
+  startTime Int
+  endTime   Int
+  maxSlots  Int      @default(3)
+  reason    String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model SessionHistory {
   id        String   @id @default(cuid())
   userId    String
-  user      User     @relation(fields: [userId], references: [id])
   amount    Int
-  category  String   // sponsor, reward, cancellation, loyalty, special
+  category  String
   reason    String
-  type      String   // CREDIT or DEBIT
+  type      String
   adminId   String?
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  user      User     @relation(fields: [userId], references: [id])
 
   @@index([userId])
-} 
+}
+
+enum UserType {
+  parent
+  independent_learner
+}
+
+enum Role {
+  user
+  admin
+}

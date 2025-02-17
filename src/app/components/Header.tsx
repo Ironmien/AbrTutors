@@ -4,10 +4,18 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
 import { useSession, signOut } from "next-auth/react";
+import { usePathname } from "next/navigation";
 
 export default function Header() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const { data: session } = useSession();
+  const pathname = usePathname();
+
+  const getLinkClass = (path: string) => {
+    const baseClass = "text-gray-700 hover:text-amber-800";
+    const activeClass = "border-b-2 border-amber-700";
+    return `${baseClass} ${pathname === path ? activeClass : ""}`;
+  };
 
   return (
     <header className="bg-amber-50 shadow-sm fixed w-full top-0 z-50">
@@ -30,22 +38,22 @@ export default function Header() {
 
           {/* Desktop Navigation */}
           <div className="hidden sm:flex sm:space-x-8 sm:items-center">
-            <Link href="/" className="text-gray-700 hover:text-amber-800">
+            <Link href="/" className={getLinkClass("/")}>
               Home
             </Link>
-            <Link
-              href="/services"
-              className="text-gray-700 hover:text-amber-800"
-            >
+            <Link href="/services" className={getLinkClass("/services")}>
               Services
             </Link>
-            <Link href="/about" className="text-gray-700 hover:text-amber-800">
+            <Link href="/about" className={getLinkClass("/about")}>
               About
             </Link>
             <Link
-              href="/contact"
-              className="text-gray-700 hover:text-amber-800"
+              href="/testimonials"
+              className={getLinkClass("/testimonials")}
             >
+              Testimonials
+            </Link>
+            <Link href="/contact" className={getLinkClass("/contact")}>
               Contact
             </Link>
             {session ? (
@@ -117,27 +125,30 @@ export default function Header() {
         {/* Mobile Navigation */}
         <div className={`${isMenuOpen ? "block" : "hidden"} sm:hidden`}>
           <div className="pt-2 pb-3 space-y-1">
-            <Link
-              href="/"
-              className="block px-3 py-2 text-gray-700 hover:text-amber-800"
-            >
+            <Link href="/" className={`block px-3 py-2 ${getLinkClass("/")}`}>
               Home
             </Link>
             <Link
               href="/services"
-              className="block px-3 py-2 text-gray-700 hover:text-amber-800"
+              className={`block px-3 py-2 ${getLinkClass("/services")}`}
             >
               Services
             </Link>
             <Link
               href="/about"
-              className="block px-3 py-2 text-gray-700 hover:text-amber-800"
+              className={`block px-3 py-2 ${getLinkClass("/about")}`}
             >
               About
             </Link>
             <Link
+              href="/testimonials"
+              className={`block px-3 py-2 ${getLinkClass("/testimonials")}`}
+            >
+              Testimonials
+            </Link>
+            <Link
               href="/contact"
-              className="block px-3 py-2 text-gray-700 hover:text-amber-800"
+              className={`block px-3 py-2 ${getLinkClass("/contact")}`}
             >
               Contact
             </Link>

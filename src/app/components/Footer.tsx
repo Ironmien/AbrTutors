@@ -12,13 +12,14 @@ export default function Footer() {
             <h3 className="text-xl font-bold text-amber-400">ABR TUTORS</h3>
             <p className="mt-4 text-gray-300">
               Empowering students to excel in <br />
-              mathematics through personalized <br />
-              tutoring and dedicated support.
+              Pure Mathematics through personalized <br />
+              online tutoring and dedicated support. <br />
+              First lesson FREE for new students!
             </p>
             <p className="mt-4 text-gray-300">
-              142 Govan Mbeki Avenue
+              Southend
               <br />
-              Qgebera
+              Port Elizabeth
               <br />
               South Africa
             </p>

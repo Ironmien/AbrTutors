@@ -1,9 +1,28 @@
+"use client";
+
 import Link from "next/link";
 import Image from "next/image";
 import Header from "./components/Header";
 import Footer from "./components/Footer";
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { signIn } from "next-auth/react";
+import type { User } from "@/types";
 
 export default function Home() {
+  const { data: session } = useSession();
+  const router = useRouter();
+
+  const handleBookSession = () => {
+    if (!session) {
+      // If not signed in, redirect to sign in page
+      signIn(undefined, { callbackUrl: "/client/dashboard" });
+      return;
+    }
+    // If already signed in, redirect to dashboard
+    router.push("/client/dashboard");
+  };
+
   return (
     <>
       <Header />
@@ -32,12 +51,12 @@ export default function Home() {
                         </Link>
                       </div>
                       <div className="mt-3 sm:mt-0 sm:ml-3">
-                        <Link
-                          href="/book"
+                        <button
+                          onClick={handleBookSession}
                           className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-amber-700 bg-amber-50 hover:bg-amber-100 md:py-4 md:text-lg md:px-10"
                         >
                           Book a Session
-                        </Link>
+                        </button>
                       </div>
                     </div>
                   </div>
@@ -66,7 +85,7 @@ export default function Home() {
               </h2>
               <p className="mt-4 max-w-2xl text-xl text-gray-500 lg:mx-auto">
                 At ABR TUTORS, we're passionate about helping students excel in
-                mathematics. With tailored tutoring sessions, we empower
+                mathematics. With tailored online tutoring sessions, we empower
                 learners to achieve their academic goals and build confidence.
               </p>
             </div>
@@ -75,20 +94,22 @@ export default function Home() {
               <div className="space-y-10 md:space-y-0 md:grid md:grid-cols-2 md:gap-x-8 md:gap-y-10">
                 <div className="relative">
                   <div className="text-lg leading-6 font-medium text-gray-900">
-                    Physical Location
+                    Video Call Sessions
                   </div>
                   <p className="mt-2 text-base text-gray-500">
-                    Visit us at 142 Govan Mbeki Avenue, Qgebera for in-person
-                    sessions in our modern learning environment.
+                    Join our interactive video sessions for a personalized
+                    learning experience with real-time collaboration and screen
+                    sharing.
                   </p>
                 </div>
                 <div className="relative">
                   <div className="text-lg leading-6 font-medium text-gray-900">
-                    Online Sessions
+                    Telephone Consultations
                   </div>
                   <p className="mt-2 text-base text-gray-500">
-                    Can't make it in person? Join us online for the same quality
-                    tutoring experience from the comfort of your home.
+                    Schedule a telephone consultation to discuss your learning
+                    needs and get started with our personalized tutoring
+                    programs.
                   </p>
                 </div>
               </div>
@@ -104,51 +125,139 @@ export default function Home() {
                 Our Services
               </h2>
               <p className="mt-4 max-w-2xl text-xl text-gray-500 lg:mx-auto">
-                Comprehensive math tutoring tailored to your needs
+                Specializing in Pure Mathematics for:
+                <br />
+                <span className="font-medium">
+                  Senior Phase (Grade 8-9)
+                </span>{" "}
+                and <span className="font-medium">FET Phase (Grade 10-12)</span>
               </p>
+              <div className="mt-4 text-amber-700 font-semibold">
+                Sign up now and get your first lesson FREE!
+              </div>
             </div>
 
             <div className="mt-10">
               <div className="space-y-10 md:space-y-0 md:grid md:grid-cols-3 md:gap-x-8 md:gap-y-10">
-                <div className="relative">
-                  <div className="text-lg leading-6 font-medium text-gray-900">
-                    One-on-One Tutoring
-                  </div>
-                  <p className="mt-2 text-base text-gray-500">
-                    Personalized attention and customized learning plans for
-                    optimal progress.
+                {/* Basic Package */}
+                <div className="relative bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                  <h3 className="text-2xl font-bold text-gray-900">
+                    Single Session
+                  </h3>
+                  <p className="mt-4 text-lg text-amber-700 font-bold">
+                    R200 per session
                   </p>
+                  <ul className="mt-4 space-y-2 text-gray-600">
+                    <li>• Group sessions (max 3 learners)</li>
+                    <li>• Pay as you go</li>
+                    <li>• Online interactive learning</li>
+                    <li>• Basic homework support</li>
+                    <li>• Flexible scheduling</li>
+                  </ul>
                 </div>
 
-                <div className="relative">
-                  <div className="text-lg leading-6 font-medium text-gray-900">
-                    All Grade Levels
+                {/* Standard Package */}
+                <div className="relative bg-white p-6 rounded-lg shadow-md border-2 border-amber-500">
+                  <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                    <span className="bg-amber-500 text-white px-4 py-1 rounded-full text-sm">
+                      Most Popular
+                    </span>
                   </div>
-                  <p className="mt-2 text-base text-gray-500">
-                    From primary school basics to advanced high school
-                    mathematics.
+                  <h3 className="text-2xl font-bold text-gray-900">
+                    Monthly Standard
+                  </h3>
+                  <p className="mt-4 text-lg text-amber-700 font-bold">
+                    R700 per month
                   </p>
+                  <ul className="mt-4 space-y-2 text-gray-600">
+                    <li>• Group sessions (max 3 learners)</li>
+                    <li>• 4 sessions per month</li>
+                    <li>• Online interactive learning</li>
+                    <li>• Extended homework support</li>
+                    <li>• WhatsApp support</li>
+                    <li>• Save on per-session cost</li>
+                  </ul>
                 </div>
 
-                <div className="relative">
-                  <div className="text-lg leading-6 font-medium text-gray-900">
-                    Flexible Scheduling
-                  </div>
-                  <p className="mt-2 text-base text-gray-500">
-                    Book sessions at times that work best for you, both online
-                    and in-person.
+                {/* Premium Package */}
+                <div className="relative bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                  <h3 className="text-2xl font-bold text-gray-900">
+                    Monthly Premium
+                  </h3>
+                  <p className="mt-4 text-lg text-amber-700 font-bold">
+                    R1300 per month
                   </p>
+                  <ul className="mt-4 space-y-2 text-gray-600">
+                    <li>• Group sessions (max 3 learners)</li>
+                    <li>• 8 sessions per month</li>
+                    <li>• Online interactive learning</li>
+                    <li>• Priority homework support</li>
+                    <li>• 24/7 WhatsApp support</li>
+                    <li>• Best value per session</li>
+                    <li>• Monthly progress reports</li>
+                  </ul>
                 </div>
               </div>
-            </div>
 
-            <div className="mt-10 text-center">
-              <Link
-                href="/book"
-                className="inline-flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-amber-700 hover:bg-amber-800 md:py-4 md:text-lg md:px-10"
-              >
-                Book Your First Session
-              </Link>
+              {/* Additional Information */}
+              <div className="mt-12 bg-gray-50 p-6 rounded-lg">
+                <h3 className="text-xl font-bold text-gray-900 mb-4">
+                  Additional Services & Information
+                </h3>
+                <div className="grid md:grid-cols-2 gap-6">
+                  <div>
+                    <h4 className="font-semibold text-amber-700">
+                      Private Online Sessions
+                    </h4>
+                    <p className="text-gray-600 mt-2">
+                      Looking for one-on-one attention? Our private online
+                      sessions offer personalized attention and flexible
+                      scheduling.
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-semibold text-amber-700">
+                      Interactive Learning
+                    </h4>
+                    <p className="text-gray-600 mt-2">
+                      Experience engaging online tutoring with our interactive
+                      digital whiteboard and screen sharing capabilities.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Important Notes */}
+              <div className="mt-8 text-gray-600">
+                <h4 className="font-semibold text-amber-700 mb-2">
+                  Important Notes:
+                </h4>
+                <ul className="list-disc pl-5 space-y-2">
+                  <li>
+                    All sessions are conducted online through our interactive
+                    learning platform
+                  </li>
+                  <li>
+                    Initial consultation via telephone or video call to assess
+                    your needs
+                  </li>
+                  <li>
+                    We offer Pure Mathematics tutoring for:
+                    <ul className="pl-5 mt-2 space-y-1">
+                      <li>Senior Phase: Grade 8-9</li>
+                      <li>FET Phase: Grade 10-12</li>
+                    </ul>
+                  </li>
+                  <li>First lesson is FREE for new signups</li>
+                  <li>
+                    Group sessions are limited to 3 learners for optimal
+                    attention
+                  </li>
+                  <li>
+                    Use our chatbot to schedule a consultation or book a session
+                  </li>
+                </ul>
+              </div>
             </div>
           </div>
         </div>
@@ -229,13 +338,15 @@ export default function Home() {
                   <h3 className="text-lg font-medium text-gray-900">
                     Our Location
                   </h3>
-                  <p className="mt-2 text-base text-gray-500">
-                    142 Govan Mbeki Avenue
-                    <br />
-                    Qgebera
-                    <br />
-                    South Africa
-                  </p>
+                  <div className="text-gray-600">
+                    <p>
+                      Southend
+                      <br />
+                      Port Elizabeth
+                      <br />
+                      South Africa
+                    </p>
+                  </div>
                   <div className="mt-4">
                     <a
                       href="https://www.google.com/maps/search/?api=1&query=142+Govan+Mbeki+Avenue+Qgebera"

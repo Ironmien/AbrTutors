@@ -156,22 +156,14 @@ export default function Contact() {
                 <h3 className="text-lg font-medium text-gray-900">
                   Our Location
                 </h3>
-                <p className="mt-2 text-base text-gray-500">
-                  142 Govan Mbeki Avenue
-                  <br />
-                  Qgebera
-                  <br />
-                  South Africa
-                </p>
                 <div className="mt-4">
-                  <a
-                    href="https://www.google.com/maps/search/?api=1&query=142+Govan+Mbeki+Avenue+Qgebera"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="text-amber-700 hover:text-amber-800"
-                  >
-                    View on Google Maps →
-                  </a>
+                  <p className="text-gray-600">
+                    Southend
+                    <br />
+                    Port Elizabeth
+                    <br />
+                    South Africa
+                  </p>
                 </div>
               </div>
 
@@ -189,6 +181,46 @@ export default function Contact() {
                     <dd>+27 075 1499977</dd>
                   </div>
                 </dl>
+              </div>
+
+              {/* Services Information */}
+              <div className="mt-6">
+                <h3 className="text-lg font-medium text-gray-900">
+                  Our Services
+                </h3>
+                <div className="mt-4 space-y-4">
+                  <div>
+                    <h4 className="font-medium text-amber-700">
+                      Online Group Sessions
+                    </h4>
+                    <p className="text-gray-600 text-sm mt-1">
+                      Single sessions: R200 per session Monthly packages from
+                      R700 (4 sessions) to R1300 (8 sessions)
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-amber-700">
+                      Private Sessions
+                    </h4>
+                    <p className="text-gray-600 text-sm mt-1">
+                      Contact us for personalized one-on-one tutoring rates
+                    </p>
+                  </div>
+                  <div>
+                    <h4 className="font-medium text-amber-700">
+                      Home Tutoring
+                    </h4>
+                    <p className="text-gray-600 text-sm mt-1">
+                      Special rates for in-home tutoring - Contact for quotes
+                    </p>
+                  </div>
+                </div>
+                <div className="mt-4 bg-amber-50 p-4 rounded-md">
+                  <p className="text-sm text-amber-800">
+                    <strong>Special Offer:</strong> First lesson FREE for new
+                    signups! Currently specializing in Pure Mathematics.
+                  </p>
+                </div>
               </div>
 
               <div className="mt-6">

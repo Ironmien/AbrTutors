@@ -1,9 +1,7 @@
 import { NextResponse } from "next/server";
 import { getServerSession } from "next-auth";
-import { PrismaClient } from "@prisma/client";
-import { authOptions } from "../auth/[...nextauth]/route";
-
-const prisma = new PrismaClient();
+import { db } from "@/lib/db";
+import { authOptions } from "@/lib/auth";
 
 export async function POST(request: Request) {
   try {
@@ -18,20 +16,20 @@ export async function POST(request: Request) {
 
     const userEmail = session.user.email;
     const body = await request.json();
-    const { packageId, amount, credits } = body;
+    const { packageId, amount, sessions } = body;
 
     // Validate required fields
-    if (!packageId || !amount || !credits) {
+    if (!packageId || !amount || !sessions) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    // Create payment and add credits in a transaction
-    const result = await prisma.$transaction(async (tx) => {
+    // Create payment and add sessions in a transaction
+    const result = await db.$transaction(async (tx) => {
       // Create the payment record
-      const payment = await prisma.payment.create({
+      const payment = await tx.payment.create({
         data: {
           amount,
           type: packageId,
@@ -40,16 +38,27 @@ export async function POST(request: Request) {
         },
       });
 
-      // Add credits to user
-      const user = await prisma.user.update({
+      // Add sessions to user
+      const user = await tx.user.update({
         where: { email: userEmail },
         data: {
-          credits: {
-            increment: credits,
+          availableSessions: {
+            increment: sessions,
           },
         },
         select: {
-          credits: true,
+          availableSessions: true,
+        },
+      });
+
+      // Create session history record
+      await tx.sessionHistory.create({
+        data: {
+          userId: session.user.id,
+          amount: sessions,
+          category: "purchase",
+          reason: `Purchased ${sessions} session${sessions > 1 ? "s" : ""}`,
+          type: "ADD",
         },
       });
 

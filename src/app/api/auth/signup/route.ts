@@ -1,29 +1,27 @@
 import { NextResponse } from "next/server";
-import { PrismaClient } from "@prisma/client";
 import { hash } from "bcryptjs";
+import { db } from "@/lib/db";
 
-const prisma = new PrismaClient();
-
-export async function POST(request: Request) {
+export async function POST(req: Request) {
   try {
-    const { name, email, password } = await request.json();
+    const { name, email, password, userType } = await req.json();
 
     // Validate input
-    if (!name || !email || !password) {
+    if (!name || !email || !password || !userType) {
       return NextResponse.json(
         { error: "Missing required fields" },
         { status: 400 }
       );
     }
 
-    // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
+    // Check if email is already registered
+    const existingUser = await db.user.findUnique({
       where: { email },
     });
 
     if (existingUser) {
       return NextResponse.json(
-        { error: "User with this email already exists" },
+        { error: "Email already registered" },
         { status: 400 }
       );
     }
@@ -31,13 +29,25 @@ export async function POST(request: Request) {
     // Hash password
     const hashedPassword = await hash(password, 12);
 
-    // Create user
-    const user = await prisma.user.create({
+    // Create user with correct role and userType
+    const user = await db.user.create({
       data: {
         name,
         email,
         password: hashedPassword,
         role: "user",
+        userType,
+        profileComplete: false,
+        availableSessions: 0,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        role: true,
+        userType: true,
+        profileComplete: true,
+        availableSessions: true,
       },
     });
 
@@ -48,6 +58,9 @@ export async function POST(request: Request) {
           name: user.name,
           email: user.email,
           role: user.role,
+          userType: user.userType,
+          profileComplete: user.profileComplete,
+          availableSessions: user.availableSessions,
         },
       },
       { status: 201 }

@@ -46,9 +46,8 @@ export default function Login() {
       if (userData.role === "admin") {
         router.push("/admin/dashboard");
       } else {
-        // Redirect to the originally requested page or home
-        const callbackUrl = searchParams?.get("callbackUrl") || "/";
-        router.push(callbackUrl);
+        // If not admin, redirect to client dashboard
+        router.push("/client/dashboard");
       }
     } catch (error) {
       setError("An error occurred during login");

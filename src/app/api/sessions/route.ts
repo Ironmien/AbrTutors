@@ -18,18 +18,18 @@ export async function GET() {
 
     const user = await prisma.user.findUnique({
       where: { email: session.user.email },
-      select: { credits: true },
+      select: { sessions: true },
     });
 
     if (!user) {
       return NextResponse.json({ error: "User not found" }, { status: 404 });
     }
 
-    return NextResponse.json({ credits: user.credits });
+    return NextResponse.json({ sessions: user.sessions });
   } catch (error) {
-    console.error("Error fetching credits:", error);
+    console.error("Error fetching sessions:", error);
     return NextResponse.json(
-      { error: "Failed to fetch credits" },
+      { error: "Failed to fetch sessions" },
       { status: 500 }
     );
   }

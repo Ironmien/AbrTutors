@@ -1,11 +1,17 @@
 "use client";
 
-import React from "react";
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import Header from "@/components/Header";
-import Footer from "@/components/Footer";
+import { useRouter } from "next/navigation";
+import { Calendar } from "@/components/ui/calendar";
+import { toast } from "sonner";
+import { Clock, GraduationCap, CreditCard } from "lucide-react";
+
+interface Learner {
+  id: string;
+  name: string;
+  subjects: string[];
+}
 
 interface TimeSlot {
   hour: number;
@@ -13,253 +19,254 @@ interface TimeSlot {
   availableSlotNumbers: number[];
 }
 
-interface AvailabilityResponse {
-  availability: TimeSlot[];
-  error?: string;
+interface BookingFormData {
+  date: Date | undefined;
+  hour: number | null;
+  slotNumber: number | null;
+  learnerId: string;
+  sessionType: string;
+  subject: string;
 }
 
-const BookingPage = () => {
+export default function BookingPage() {
   const { data: session } = useSession();
   const router = useRouter();
-
-  const [credits, setCredits] = useState<number>(0);
-  const [selectedDate, setSelectedDate] = useState<string>("");
-  const [selectedHour, setSelectedHour] = useState<number | null>(null);
-  const [selectedSlot, setSelectedSlot] = useState<number | null>(null);
-  const [availability, setAvailability] = useState<TimeSlot[]>([]);
+  const [learners, setLearners] = useState<Learner[]>([]);
+  const [timeSlots, setTimeSlots] = useState<TimeSlot[]>([]);
+  const [sessions, setSessions] = useState(0);
   const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string>("");
-  const [studentName, setStudentName] = useState("");
-  const [package_, setPackage] = useState("single");
-  const [sessionType, setSessionType] = useState("online");
+
+  const [formData, setFormData] = useState<BookingFormData>({
+    date: undefined,
+    hour: null,
+    slotNumber: null,
+    learnerId: "",
+    sessionType: "",
+    subject: "",
+  });
 
   useEffect(() => {
-    if (session?.user?.email) {
+    if (session) {
+      fetchLearners();
       fetchUserCredits();
     }
   }, [session]);
 
   useEffect(() => {
-    if (selectedDate) {
+    if (formData.date) {
       fetchAvailability();
     }
-  }, [selectedDate]);
+  }, [formData.date]);
+
+  const fetchLearners = async () => {
+    try {
+      const response = await fetch("/api/learners");
+      if (!response.ok) throw new Error("Failed to fetch learners");
+      const data = await response.json();
+      setLearners(data);
+    } catch (error) {
+      toast.error("Failed to fetch learners");
+    }
+  };
 
   const fetchUserCredits = async () => {
     try {
-      const response = await fetch("/api/credits");
+      const response = await fetch("/api/user/sessions");
+      if (!response.ok) throw new Error("Failed to fetch credits");
       const data = await response.json();
-
-      if (response.ok) {
-        setCredits(data.credits);
-      } else {
-        setError(data.error || "Failed to fetch credits");
-      }
+      setSessions(data.sessions);
     } catch (error) {
-      setError("Failed to fetch credits");
+      toast.error("Failed to fetch credits");
     }
   };
 
   const fetchAvailability = async () => {
+    if (!formData.date) return;
     try {
-      const response = await fetch(`/api/availability?date=${selectedDate}`);
-      const data: AvailabilityResponse = await response.json();
-
-      if (response.ok) {
-        setAvailability(data.availability);
-      } else {
-        setError(data.error || "Failed to fetch availability");
-      }
+      const response = await fetch(
+        `/api/availability?date=${formData.date.toISOString().split("T")[0]}`
+      );
+      if (!response.ok) throw new Error("Failed to fetch availability");
+      const data = await response.json();
+      setTimeSlots(data.availability);
     } catch (error) {
-      setError("Failed to fetch availability");
+      toast.error("Failed to fetch availability");
     }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (
+      !formData.date ||
+      !formData.hour ||
+      !formData.learnerId ||
+      !formData.sessionType
+    ) {
+      toast.error("Please fill in all required fields");
+      return;
+    }
+
     setLoading(true);
-    setError("");
-
-    if (credits < 1) {
-      setError("You don't have enough credits to book a session");
-      setLoading(false);
-      return;
-    }
-
-    if (!selectedDate || !selectedHour || !selectedSlot) {
-      setError("Please select a date and time slot");
-      setLoading(false);
-      return;
-    }
-
     try {
       const response = await fetch("/api/bookings", {
         method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({
-          date: selectedDate,
-          hour: selectedHour,
-          slotNumber: selectedSlot,
-          studentName,
-          package: package_,
-          sessionType,
-        }),
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
       });
 
-      const data = await response.json();
+      if (!response.ok) throw new Error("Failed to create booking");
 
-      if (response.ok) {
-        router.push("/dashboard?booking=success");
-      } else {
-        setError(data.error || "Failed to book session");
-      }
+      toast.success("Booking created successfully");
+      router.push("/sessions");
     } catch (error) {
-      setError("Failed to book session");
+      toast.error("Failed to create booking");
     } finally {
       setLoading(false);
     }
   };
 
-  if (!session) {
-    router.push("/login?callbackUrl=/book");
-    return null;
+  if (sessions <= 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+        <div className="max-w-md mx-auto text-center">
+          <CreditCard className="mx-auto h-12 w-12 text-gray-400" />
+          <h2 className="mt-2 text-lg font-medium text-gray-900">
+            Insufficient Sessions
+          </h2>
+          <p className="mt-1 text-sm text-gray-500">
+            You currently have no available sessions. Please purchase additional
+            sessions to book a tutoring appointment.
+          </p>
+          <button
+            onClick={() => router.push("/sessions")}
+            className="mt-4 inline-flex items-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-amber-600 hover:bg-amber-700"
+          >
+            Purchase Sessions
+          </button>
+        </div>
+      </div>
+    );
   }
 
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-grow container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold mb-8">Book a Session</h1>
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-3xl mx-auto">
+        <div className="text-center mb-8">
+          <h1 className="text-3xl font-bold text-gray-900">Book a Session</h1>
+          <p className="mt-2 text-gray-600">Available Sessions: {sessions}</p>
+        </div>
 
-        <div className="bg-white rounded-lg shadow-md p-6 max-w-2xl mx-auto">
-          <div className="mb-6">
-            <p className="text-lg">
-              Available Credits: <span className="font-bold">{credits}</span>
-            </p>
-            {credits < 1 && (
-              <p className="text-red-500 mt-2">
-                You need at least 1 credit to book a session. Please purchase
-                credits first.
-              </p>
-            )}
+        <form
+          onSubmit={handleSubmit}
+          className="space-y-8 bg-white p-6 rounded-lg shadow"
+        >
+          {/* Date Selection */}
+          <div>
+            <h2 className="text-xl font-semibold mb-4">1. Select Date</h2>
+            <Calendar
+              mode="single"
+              selected={formData.date}
+              onSelect={(date) => setFormData({ ...formData, date })}
+              disabled={(date) => date < new Date() || date.getDay() === 0}
+              className="rounded-md border"
+            />
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-6">
+          {/* Time Slot Selection */}
+          {formData.date && timeSlots.length > 0 && (
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Student Name
-              </label>
-              <input
-                type="text"
-                value={studentName}
-                onChange={(e) => setStudentName(e.target.value)}
-                required
-                className="w-full px-3 py-2 border rounded-md"
-                placeholder="Enter student name"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Package
-              </label>
-              <select
-                value={package_}
-                onChange={(e) => setPackage(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md"
-              >
-                <option value="single">Single Session</option>
-                <option value="package5">5 Sessions Package</option>
-                <option value="package10">10 Sessions Package</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Session Type
-              </label>
-              <select
-                value={sessionType}
-                onChange={(e) => setSessionType(e.target.value)}
-                className="w-full px-3 py-2 border rounded-md"
-              >
-                <option value="online">Online</option>
-                <option value="inPerson">In Person</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-2">
-                Date
-              </label>
-              <input
-                type="date"
-                value={selectedDate}
-                onChange={(e) => setSelectedDate(e.target.value)}
-                required
-                min={new Date().toISOString().split("T")[0]}
-                className="w-full px-3 py-2 border rounded-md"
-              />
-            </div>
-
-            {selectedDate && availability.length > 0 && (
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Available Time Slots
-                </label>
-                <div className="grid grid-cols-2 gap-4">
-                  {availability.map((slot) => (
-                    <div key={slot.hour} className="border rounded-md p-4">
-                      <p className="font-medium mb-2">
-                        {slot.hour}:00 - {slot.availableSlots} slots available
-                      </p>
-                      <div className="flex gap-2">
-                        {slot.availableSlotNumbers.map((slotNum) => (
-                          <button
-                            key={slotNum}
-                            type="button"
-                            onClick={() => {
-                              setSelectedHour(slot.hour);
-                              setSelectedSlot(slotNum);
-                            }}
-                            className={`px-3 py-1 rounded-md ${
-                              selectedHour === slot.hour &&
-                              selectedSlot === slotNum
-                                ? "bg-blue-500 text-white"
-                                : "bg-gray-100 hover:bg-gray-200"
-                            }`}
-                          >
-                            Slot {slotNum}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  ))}
-                </div>
+              <h2 className="text-xl font-semibold mb-4">2. Select Time</h2>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {timeSlots.map(
+                  (slot) =>
+                    slot.availableSlots > 0 && (
+                      <button
+                        key={slot.hour}
+                        type="button"
+                        onClick={() =>
+                          setFormData({ ...formData, hour: slot.hour })
+                        }
+                        className={`p-4 rounded-lg border text-center ${
+                          formData.hour === slot.hour
+                            ? "border-amber-600 bg-amber-50"
+                            : "border-gray-200 hover:border-amber-600"
+                        }`}
+                      >
+                        <Clock className="h-5 w-5 mx-auto mb-2" />
+                        {slot.hour}:00
+                      </button>
+                    )
+                )}
               </div>
-            )}
+            </div>
+          )}
 
-            {error && <div className="text-red-500">{error}</div>}
+          {/* Learner Selection */}
+          {session?.user?.userType === "parent" && (
+            <div>
+              <h2 className="text-xl font-semibold mb-4">3. Select Learner</h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                {learners.map((learner) => (
+                  <button
+                    key={learner.id}
+                    type="button"
+                    onClick={() =>
+                      setFormData({ ...formData, learnerId: learner.id })
+                    }
+                    className={`p-4 rounded-lg border text-left ${
+                      formData.learnerId === learner.id
+                        ? "border-amber-600 bg-amber-50"
+                        : "border-gray-200 hover:border-amber-600"
+                    }`}
+                  >
+                    <GraduationCap className="h-5 w-5 mb-2" />
+                    <div className="font-medium">{learner.name}</div>
+                    <div className="text-sm text-gray-500">
+                      {learner.subjects.join(", ")}
+                    </div>
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
+          {/* Session Type */}
+          <div>
+            <h2 className="text-xl font-semibold mb-4">
+              {session?.user?.userType === "parent" ? "4" : "3"}. Select Session
+              Type
+            </h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              {["Online", "In-Person", "Group"].map((type) => (
+                <button
+                  key={type}
+                  type="button"
+                  onClick={() =>
+                    setFormData({ ...formData, sessionType: type })
+                  }
+                  className={`p-4 rounded-lg border text-center ${
+                    formData.sessionType === type
+                      ? "border-amber-600 bg-amber-50"
+                      : "border-gray-200 hover:border-amber-600"
+                  }`}
+                >
+                  {type}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div className="pt-6 border-t">
             <button
               type="submit"
-              disabled={loading || credits < 1}
-              className={`w-full py-3 px-4 rounded-md text-white font-medium ${
-                loading || credits < 1
-                  ? "bg-gray-400 cursor-not-allowed"
-                  : "bg-blue-500 hover:bg-blue-600"
-              }`}
+              disabled={loading}
+              className="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-amber-600 hover:bg-amber-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-amber-500 disabled:opacity-50"
             >
-              {loading ? "Booking..." : "Book Session"}
+              {loading ? "Creating Booking..." : "Book Session"}
             </button>
-          </form>
-        </div>
-      </main>
-      <Footer />
+          </div>
+        </form>
+      </div>
     </div>
   );
-};
-
-export default BookingPage;
+}

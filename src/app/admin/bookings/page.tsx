@@ -1,27 +1,33 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import Calendar from "react-calendar";
-import { CheckCircle2, XCircle, Clock, CalendarDays } from "lucide-react";
+import { toast } from "sonner";
 import "react-calendar/dist/Calendar.css";
+
+type BookingStatus = "pending" | "confirmed" | "cancelled" | "completed";
+
+interface Learner {
+  id: string;
+  name: string;
+  schoolYear: number | null;
+  subjects: string[];
+}
 
 interface Booking {
   id: string;
-  userId: string;
-  date: Date;
+  date: string;
   hour: number;
   slotNumber: number;
+  studentName: string;
+  package: string;
+  sessionType: string;
   status: BookingStatus;
-  user: {
-    name: string;
-    email: string;
-    packageType: string;
-    sessionType: string;
-  };
+  userEmail: string;
+  learner: Learner | null;
+  createdAt: string;
 }
-
-type BookingStatus = "pending" | "completed" | "cancelled" | "no-show";
 
 export default function BookingsPage() {
   const { data: session } = useSession();
@@ -109,108 +115,88 @@ export default function BookingsPage() {
 
         <div>
           {loading && <div>Loading bookings...</div>}
-          {error && <div className="text-red-500">{error}</div>}
-          {success && <div className="text-green-500 mb-4">{success}</div>}
+          {error && <div className="text-red-600">{error}</div>}
+          {success && <div className="text-green-600">{success}</div>}
 
-          <div className="bg-white rounded-lg shadow overflow-hidden">
-            <table className="min-w-full divide-y divide-gray-200">
-              <thead className="bg-gray-50">
-                <tr>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Time
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Student
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Package
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Status
-                  </th>
-                  <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="bg-white divide-y divide-gray-200">
-                {bookings.map((booking) => (
-                  <tr key={booking.id}>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div className="flex items-center">
-                        <CalendarDays className="h-5 w-5 text-gray-400 mr-2" />
-                        <span>{`${booking.hour}:${
-                          booking.slotNumber === 1
-                            ? "00"
-                            : ((booking.slotNumber - 1) * 15)
-                                .toString()
-                                .padStart(2, "0")
-                        }`}</span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {booking.user.name}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {booking.user.email}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {booking.user.packageType}
-                        </div>
-                        <div className="text-sm text-gray-500">
-                          {booking.user.sessionType}
-                        </div>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span
-                        className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full 
-                        ${
-                          booking.status === "completed"
-                            ? "bg-green-100 text-green-800"
+          {!loading && !error && bookings.length === 0 && (
+            <div>No bookings found for this date.</div>
+          )}
+
+          {bookings.length > 0 && (
+            <div className="space-y-4">
+              {bookings.map((booking) => (
+                <div
+                  key={booking.id}
+                  className="bg-white p-4 rounded-lg shadow border border-gray-200"
+                >
+                  <div className="flex justify-between items-start">
+                    <div>
+                      <h3 className="font-semibold">
+                        {booking.hour}:00 - Slot {booking.slotNumber}
+                      </h3>
+                      <p className="text-gray-600">
+                        Student: {booking.studentName}
+                      </p>
+                      {booking.learner && (
+                        <>
+                          <p className="text-gray-600">
+                            Year: {booking.learner.schoolYear}
+                          </p>
+                          <div className="mt-1">
+                            <p className="text-sm text-gray-600">Subjects:</p>
+                            <div className="flex flex-wrap gap-1 mt-1">
+                              {booking.learner.subjects.map((subject) => (
+                                <span
+                                  key={subject}
+                                  className="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800"
+                                >
+                                  {subject}
+                                </span>
+                              ))}
+                            </div>
+                          </div>
+                        </>
+                      )}
+                      <p className="text-gray-600">
+                        Package: {booking.package}
+                      </p>
+                      <p className="text-gray-600">
+                        Session: {booking.sessionType}
+                      </p>
+                      <p className="text-gray-600">
+                        Parent Email: {booking.userEmail}
+                      </p>
+                    </div>
+                    <div>
+                      <select
+                        value={booking.status}
+                        onChange={(e) =>
+                          handleStatusUpdate(
+                            booking.id,
+                            e.target.value as BookingStatus
+                          )
+                        }
+                        className={`rounded-md border px-2 py-1 text-sm ${
+                          booking.status === "confirmed"
+                            ? "bg-green-50 text-green-700 border-green-200"
                             : booking.status === "cancelled"
-                            ? "bg-red-100 text-red-800"
-                            : booking.status === "no-show"
-                            ? "bg-yellow-100 text-yellow-800"
-                            : "bg-blue-100 text-blue-800"
+                            ? "bg-red-50 text-red-700 border-red-200"
+                            : booking.status === "completed"
+                            ? "bg-blue-50 text-blue-700 border-blue-200"
+                            : "bg-yellow-50 text-yellow-700 border-yellow-200"
                         }`}
                       >
-                        {booking.status}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      {booking.status === "pending" && (
-                        <div className="flex space-x-2">
-                          <button
-                            onClick={() =>
-                              handleStatusUpdate(booking.id, "completed")
-                            }
-                            className="text-green-600 hover:text-green-900"
-                          >
-                            <CheckCircle2 className="h-5 w-5" />
-                          </button>
-                          <button
-                            onClick={() =>
-                              handleStatusUpdate(booking.id, "no-show")
-                            }
-                            className="text-yellow-600 hover:text-yellow-900"
-                          >
-                            <XCircle className="h-5 w-5" />
-                          </button>
-                        </div>
-                      )}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
+                        <option value="pending">Pending</option>
+                        <option value="confirmed">Confirmed</option>
+                        <option value="cancelled">Cancelled</option>
+                        <option value="completed">Completed</option>
+                      </select>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
     </div>

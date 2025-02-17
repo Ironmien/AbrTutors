@@ -1,184 +1,211 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import Header from "../../components/Header";
-import Footer from "../../components/Footer";
+import { useRouter } from "next/navigation";
+import { CreditCard, Check, ArrowLeft } from "lucide-react";
 
-interface Booking {
-  id: string;
-  date: string;
-  hour: number;
-  slotNumber: number;
-  studentName: string;
-  package: string;
-  sessionType: string;
-  status: string;
-}
-
-const DashboardPage = () => {
-  const { data: session } = useSession();
-  const router = useRouter();
-  const [bookings, setBookings] = useState<Booking[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [credits, setCredits] = useState(0);
-
-  useEffect(() => {
-    if (session?.user?.email) {
-      fetchBookings();
-      fetchCredits();
-    }
-  }, [session]);
-
-  const fetchBookings = async () => {
-    try {
-      const response = await fetch("/api/bookings");
-      const data = await response.json();
-
-      if (response.ok) {
-        setBookings(data.bookings);
-      } else {
-        setError(data.error || "Failed to fetch bookings");
-      }
-    } catch (error) {
-      setError("Failed to fetch bookings");
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const fetchCredits = async () => {
-    try {
-      const response = await fetch("/api/credits");
-      const data = await response.json();
-
-      if (response.ok) {
-        setCredits(data.credits);
-      }
-    } catch (error) {
-      console.error("Error fetching credits:", error);
-    }
-  };
-
-  const handleCancelBooking = async (bookingId: string) => {
-    if (!confirm("Are you sure you want to cancel this booking?")) {
-      return;
-    }
-
-    try {
-      const response = await fetch(`/api/bookings/${bookingId}`, {
-        method: "DELETE",
-      });
-
-      if (response.ok) {
-        // Refresh bookings and credits after cancellation
-        fetchBookings();
-        fetchCredits();
-      } else {
-        const data = await response.json();
-        setError(data.error || "Failed to cancel booking");
-      }
-    } catch (error) {
-      setError("Failed to cancel booking");
-    }
-  };
-
-  const formatDate = (dateString: string) => {
-    const date = new Date(dateString);
-    return date.toLocaleDateString("en-US", {
-      weekday: "long",
-      year: "numeric",
-      month: "long",
-      day: "numeric",
-    });
-  };
-
-  const formatTime = (hour: number, slotNumber: number) => {
-    return `${hour}:${slotNumber === 1 ? "00" : (slotNumber - 1) * 15} ${
-      hour >= 12 ? "PM" : "AM"
-    }`;
-  };
-
-  if (!session) {
-    router.push("/login?callbackUrl=/dashboard");
-    return null;
-  }
-
+const PayFastForm = ({
+  amount,
+  itemName,
+  description,
+}: {
+  amount: number;
+  itemName: string;
+  description: string;
+}) => {
   return (
-    <div className="min-h-screen flex flex-col">
-      <Header />
-      <main className="flex-grow container mx-auto px-4 py-8">
-        <div className="flex justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">My Dashboard</h1>
-          <div className="text-lg">
-            Available Credits: <span className="font-bold">{credits}</span>
-          </div>
-        </div>
-
-        {error && <div className="text-red-500 mb-4">{error}</div>}
-
-        {loading ? (
-          <div className="text-center">Loading...</div>
-        ) : bookings.length === 0 ? (
-          <div className="text-center py-8">
-            <p className="text-gray-600 mb-4">You have no bookings yet.</p>
-            <button
-              onClick={() => router.push("/book")}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-2 rounded-md transition-colors"
-            >
-              Book a Session
-            </button>
-          </div>
-        ) : (
-          <div className="grid gap-6">
-            {bookings.map((booking) => (
-              <div
-                key={booking.id}
-                className="bg-white rounded-lg shadow-md p-6"
-              >
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h3 className="text-xl font-semibold mb-2">
-                      {booking.studentName}
-                    </h3>
-                    <p className="text-gray-600">
-                      {formatDate(booking.date)} at{" "}
-                      {formatTime(booking.hour, booking.slotNumber)}
-                    </p>
-                    <p className="text-gray-600">
-                      Package: {booking.package} | Type: {booking.sessionType}
-                    </p>
-                    <p
-                      className={`mt-2 font-medium ${
-                        booking.status === "confirmed"
-                          ? "text-green-600"
-                          : booking.status === "cancelled"
-                          ? "text-red-600"
-                          : "text-yellow-600"
-                      }`}
-                    >
-                      Status: {booking.status}
-                    </p>
-                  </div>
-                  {booking.status !== "cancelled" && (
-                    <button
-                      onClick={() => handleCancelBooking(booking.id)}
-                      className="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md transition-colors"
-                    >
-                      Cancel
-                    </button>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-      </main>
-      <Footer />
-    </div>
+    <form
+      name="PayFastPayNowForm"
+      action="https://payment.payfast.io/eng/process"
+      method="post"
+    >
+      <input required type="hidden" name="cmd" value="_paynow" />
+      <input
+        required
+        type="hidden"
+        name="receiver"
+        pattern="[0-9]"
+        value="20736437"
+      />
+      <input required type="hidden" name="amount" value={amount.toString()} />
+      <input
+        required
+        type="hidden"
+        name="item_name"
+        maxLength={255}
+        value={itemName}
+      />
+      <input
+        type="hidden"
+        name="item_description"
+        maxLength={255}
+        value={description}
+      />
+      <table>
+        <tr>
+          <td colSpan={2} align="center">
+            <input
+              type="image"
+              src="https://my.payfast.io/images/buttons/PayNow/Primary-Large-PayNow.png"
+              alt="Pay Now"
+              title="Pay Now with Payfast"
+            />
+          </td>
+        </tr>
+      </table>
+    </form>
   );
 };
 
-export default DashboardPage;
+export default function Credits() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+
+  const handleBack = () => {
+    router.back();
+  };
+
+  if (status === "loading") {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-amber-600"></div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
+      <div className="max-w-7xl mx-auto">
+        {/* Back Button */}
+        <button
+          onClick={handleBack}
+          className="mb-6 flex items-center text-gray-600 hover:text-amber-600 transition-colors"
+        >
+          <ArrowLeft className="h-5 w-5 mr-2" />
+          Back to Dashboard
+        </button>
+
+        {/* Current Sessions */}
+        <div className="bg-white rounded-lg shadow-sm p-6 mb-8">
+          <div className="flex items-center space-x-4">
+            <CreditCard className="h-8 w-8 text-amber-600" />
+            <div>
+              <h2 className="text-2xl font-semibold text-gray-900">
+                Your Sessions
+              </h2>
+              <p className="text-gray-600">
+                Available sessions: {session?.user?.credits || 0}
+              </p>
+            </div>
+          </div>
+        </div>
+
+        <h2 className="text-2xl font-bold text-gray-900 mb-6">
+          Purchase Tutoring Sessions
+        </h2>
+
+        {/* Packages */}
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+          {/* Basic Package */}
+          <div className="bg-white rounded-lg shadow-sm p-6 border-2 border-transparent hover:border-amber-500 transition-colors">
+            <h3 className="text-xl font-semibold text-gray-900">
+              Basic Package
+            </h3>
+            <div className="mt-4">
+              <p className="text-4xl font-bold text-amber-600">R200</p>
+              <p className="text-gray-600">Single Session</p>
+            </div>
+            <ul className="mt-6 space-y-4">
+              <li className="flex items-center text-gray-600">
+                <Check className="h-5 w-5 text-green-500 mr-2" />1 Online
+                tutoring session
+              </li>
+              <li className="flex items-center text-gray-600">
+                <Check className="h-5 w-5 text-green-500 mr-2" />
+                60 minutes per session
+              </li>
+              <li className="flex items-center text-gray-600">
+                <Check className="h-5 w-5 text-green-500 mr-2" />
+                One-on-one attention
+              </li>
+            </ul>
+            <div className="mt-8">
+              <PayFastForm
+                amount={200}
+                itemName="One Session"
+                description="Basic Package of one hour session"
+              />
+            </div>
+          </div>
+
+          {/* Standard Package */}
+          <div className="bg-white rounded-lg shadow-sm p-6 border-2 border-amber-500 relative">
+            <div className="absolute top-0 right-0 bg-amber-500 text-white px-3 py-1 rounded-bl-lg rounded-tr-lg text-sm">
+              Popular
+            </div>
+            <h3 className="text-xl font-semibold text-gray-900">
+              Standard Package
+            </h3>
+            <div className="mt-4">
+              <p className="text-4xl font-bold text-amber-600">R700</p>
+              <p className="text-gray-600">4 Sessions</p>
+            </div>
+            <ul className="mt-6 space-y-4">
+              <li className="flex items-center text-gray-600">
+                <Check className="h-5 w-5 text-green-500 mr-2" />4 Online
+                tutoring sessions
+              </li>
+              <li className="flex items-center text-gray-600">
+                <Check className="h-5 w-5 text-green-500 mr-2" />
+                60 minutes per session
+              </li>
+              <li className="flex items-center text-gray-600">
+                <Check className="h-5 w-5 text-green-500 mr-2" />
+                Save R100 on sessions
+              </li>
+            </ul>
+            <div className="mt-8">
+              <PayFastForm
+                amount={700}
+                itemName="Standard Package"
+                description="Standard Package of 4 sessions of one hour each"
+              />
+            </div>
+          </div>
+
+          {/* Premium Package */}
+          <div className="bg-white rounded-lg shadow-sm p-6 border-2 border-transparent hover:border-amber-500 transition-colors">
+            <h3 className="text-xl font-semibold text-gray-900">
+              Premium Package
+            </h3>
+            <div className="mt-4">
+              <p className="text-4xl font-bold text-amber-600">R1300</p>
+              <p className="text-gray-600">8 Sessions</p>
+            </div>
+            <ul className="mt-6 space-y-4">
+              <li className="flex items-center text-gray-600">
+                <Check className="h-5 w-5 text-green-500 mr-2" />8 Online
+                tutoring sessions
+              </li>
+              <li className="flex items-center text-gray-600">
+                <Check className="h-5 w-5 text-green-500 mr-2" />
+                60 minutes per session
+              </li>
+              <li className="flex items-center text-gray-600">
+                <Check className="h-5 w-5 text-green-500 mr-2" />
+                Save R300 on sessions
+              </li>
+            </ul>
+            <div className="mt-8">
+              <PayFastForm
+                amount={1300}
+                itemName="Premium Package"
+                description="Premium Package of 8 sessions of one hour each"
+              />
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

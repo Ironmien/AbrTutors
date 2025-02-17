@@ -1,25 +1,53 @@
 "use client";
 
+import { useSession, signIn } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { CreditCard } from "lucide-react";
 import Link from "next/link";
 import Header from "../components/Header";
 import Footer from "../components/Footer";
 
 export default function Services() {
+  const { data: session } = useSession();
+  const router = useRouter();
+
+  const handleBookSession = () => {
+    if (!session) {
+      // If not signed in, redirect to sign in page with callback to /book
+      signIn(undefined, { callbackUrl: "/book" });
+      return;
+    }
+
+    // If signed in, redirect to booking page
+    // The middleware will handle all the necessary checks
+    router.push("/book");
+  };
+
   return (
     <>
       <Header />
       <main className="min-h-screen pt-16">
         {/* Hero Section */}
-        <div className="bg-amber-700">
-          <div className="max-w-7xl mx-auto py-16 px-4 sm:py-24 sm:px-6 lg:px-8">
+        <div className="relative bg-amber-50">
+          <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-24">
             <div className="text-center">
-              <h1 className="text-4xl font-extrabold text-white sm:text-5xl sm:tracking-tight lg:text-6xl">
-                Our Tutoring Services
+              <h1 className="text-4xl font-extrabold text-gray-900 sm:text-5xl md:text-6xl">
+                Expert Mathematics Tutoring
               </h1>
-              <p className="mt-5 max-w-xl mx-auto text-xl text-amber-100">
-                Personalized math tutoring tailored to your learning style and
-                goals
+              <p className="mt-3 max-w-md mx-auto text-base text-gray-500 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl">
+                Personalized online tutoring sessions to help you excel in
+                mathematics. From basic concepts to advanced problem-solving.
               </p>
+              <div className="mt-5 max-w-md mx-auto sm:flex sm:justify-center md:mt-8">
+                <div className="rounded-md shadow">
+                  <button
+                    onClick={handleBookSession}
+                    className="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-amber-600 hover:bg-amber-700 md:py-4 md:text-lg md:px-10"
+                  >
+                    Book Now
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -28,15 +56,15 @@ export default function Services() {
         <div className="py-16 bg-white">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="grid grid-cols-1 gap-12 lg:grid-cols-2">
-              {/* In-Person Tutoring */}
+              {/* Video Call Sessions */}
               <div className="bg-amber-50 rounded-lg shadow-lg overflow-hidden">
                 <div className="px-6 py-8">
                   <h3 className="text-2xl font-bold text-gray-900">
-                    In-Person Tutoring
+                    Video Call Sessions
                   </h3>
                   <p className="mt-4 text-lg text-gray-600">
-                    Join us at our modern learning facility for face-to-face
-                    tutoring sessions.
+                    Interactive online learning through video calls with screen
+                    sharing
                   </p>
                   <ul className="mt-6 space-y-4">
                     <li className="flex items-start">
@@ -56,7 +84,7 @@ export default function Services() {
                         </svg>
                       </div>
                       <p className="ml-3 text-base text-gray-600">
-                        Direct interaction with experienced tutors
+                        Real-time interaction with experienced tutors
                       </p>
                     </li>
                     <li className="flex items-start">
@@ -76,7 +104,7 @@ export default function Services() {
                         </svg>
                       </div>
                       <p className="ml-3 text-base text-gray-600">
-                        Access to physical learning materials and resources
+                        Interactive digital whiteboard and screen sharing
                       </p>
                     </li>
                     <li className="flex items-start">
@@ -96,22 +124,21 @@ export default function Services() {
                         </svg>
                       </div>
                       <p className="ml-3 text-base text-gray-600">
-                        Distraction-free learning environment
+                        Recorded sessions available for review
                       </p>
                     </li>
                   </ul>
                 </div>
               </div>
 
-              {/* Online Tutoring */}
+              {/* Telephone Consultations */}
               <div className="bg-amber-50 rounded-lg shadow-lg overflow-hidden">
                 <div className="px-6 py-8">
                   <h3 className="text-2xl font-bold text-gray-900">
-                    Online Tutoring
+                    Telephone Consultations
                   </h3>
                   <p className="mt-4 text-lg text-gray-600">
-                    Learn from the comfort of your home with our virtual
-                    tutoring sessions.
+                    Initial consultation and support through telephone calls
                   </p>
                   <ul className="mt-6 space-y-4">
                     <li className="flex items-start">
@@ -131,7 +158,7 @@ export default function Services() {
                         </svg>
                       </div>
                       <p className="ml-3 text-base text-gray-600">
-                        Flexible scheduling options
+                        Discuss learning needs and goals
                       </p>
                     </li>
                     <li className="flex items-start">
@@ -151,7 +178,7 @@ export default function Services() {
                         </svg>
                       </div>
                       <p className="ml-3 text-base text-gray-600">
-                        Interactive digital whiteboard and tools
+                        Personalized learning plan development
                       </p>
                     </li>
                     <li className="flex items-start">
@@ -171,7 +198,7 @@ export default function Services() {
                         </svg>
                       </div>
                       <p className="ml-3 text-base text-gray-600">
-                        Recorded sessions for review
+                        WhatsApp support available
                       </p>
                     </li>
                   </ul>
@@ -187,40 +214,32 @@ export default function Services() {
             <h2 className="text-3xl font-extrabold text-gray-900 text-center mb-12">
               Grade Levels We Support
             </h2>
-            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2 lg:grid-cols-3">
+            <div className="grid grid-cols-1 gap-8 sm:grid-cols-2">
+              {/* Senior Phase */}
               <div className="bg-white rounded-lg shadow-lg p-6">
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                  Primary School
+                  Senior Phase (Grade 8-9)
                 </h3>
                 <ul className="space-y-3 text-gray-600">
-                  <li>• Basic arithmetic and number sense</li>
-                  <li>• Introduction to fractions and decimals</li>
-                  <li>• Basic geometry and measurements</li>
-                  <li>• Problem-solving skills</li>
-                </ul>
-              </div>
-
-              <div className="bg-white rounded-lg shadow-lg p-6">
-                <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                  Middle School
-                </h3>
-                <ul className="space-y-3 text-gray-600">
-                  <li>• Pre-algebra fundamentals</li>
-                  <li>• Advanced fractions and ratios</li>
+                  <li>• Foundation of Pure Mathematics</li>
+                  <li>• Algebra fundamentals</li>
                   <li>• Geometry and spatial reasoning</li>
-                  <li>• Introduction to statistics</li>
+                  <li>• Number patterns and sequences</li>
+                  <li>• Introduction to trigonometry</li>
                 </ul>
               </div>
 
+              {/* FET Phase */}
               <div className="bg-white rounded-lg shadow-lg p-6">
                 <h3 className="text-xl font-semibold text-gray-900 mb-4">
-                  High School
+                  FET Phase (Grade 10-12)
                 </h3>
                 <ul className="space-y-3 text-gray-600">
-                  <li>• Algebra I and II</li>
-                  <li>• Advanced geometry</li>
-                  <li>• Trigonometry</li>
-                  <li>• Preparation for matric exams</li>
+                  <li>• Advanced Pure Mathematics</li>
+                  <li>• Complex algebra and functions</li>
+                  <li>• Advanced trigonometry</li>
+                  <li>• Calculus fundamentals</li>
+                  <li>• Matric exam preparation</li>
                 </ul>
               </div>
             </div>
@@ -228,7 +247,7 @@ export default function Services() {
         </div>
 
         {/* Pricing Section */}
-        <div className="py-16 bg-white">
+        <div className="py-16 bg-gray-50">
           <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div className="text-center">
               <h2 className="text-3xl font-extrabold text-gray-900 sm:text-4xl">
@@ -237,252 +256,137 @@ export default function Services() {
               <p className="mt-4 text-xl text-gray-600">
                 Choose the package that best fits your learning needs
               </p>
+              <div className="mt-4 text-amber-700 font-semibold">
+                Sign up now and get your first lesson FREE!
+              </div>
             </div>
 
             <div className="mt-12 grid gap-8 lg:grid-cols-3 lg:gap-12">
               {/* Basic Package */}
-              <div className="bg-white rounded-lg shadow-lg divide-y divide-gray-200">
-                <div className="p-6">
-                  <h3 className="text-2xl font-semibold text-gray-900">
-                    Basic
-                  </h3>
-                  <p className="mt-4 text-gray-600">
-                    Perfect for occasional help with specific topics
-                  </p>
-                  <p className="mt-8">
-                    <span className="text-4xl font-extrabold text-gray-900">
-                      R200
-                    </span>
-                    <span className="text-base font-medium text-gray-500">
-                      /session
-                    </span>
-                  </p>
-                  <ul className="mt-6 space-y-4">
-                    <li className="flex space-x-3">
-                      <svg
-                        className="h-5 w-5 text-amber-700"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                      <span className="text-gray-600">1-hour session</span>
-                    </li>
-                    <li className="flex space-x-3">
-                      <svg
-                        className="h-5 w-5 text-amber-700"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                      <span className="text-gray-600">Homework assistance</span>
-                    </li>
-                  </ul>
-                </div>
-                <div className="px-6 py-4">
-                  <Link
-                    href="/book?package=basic"
-                    className="block w-full text-center rounded-md bg-amber-700 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-800"
-                  >
-                    Get Started
-                  </Link>
-                </div>
+              <div className="relative bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                <h3 className="text-2xl font-bold text-gray-900">
+                  Single Session
+                </h3>
+                <p className="mt-4 text-lg text-amber-700 font-bold">
+                  R200 per session
+                </p>
+                <ul className="mt-4 space-y-2 text-gray-600">
+                  <li>• Group sessions (max 3 learners)</li>
+                  <li>• Pay as you go</li>
+                  <li>• Online interactive learning</li>
+                  <li>• Basic homework support</li>
+                  <li>• Flexible scheduling</li>
+                </ul>
+                <button
+                  onClick={handleBookSession}
+                  className="mt-8 w-full bg-amber-600 text-white py-2 px-4 rounded-md hover:bg-amber-700 transition-colors"
+                >
+                  Get Started
+                </button>
               </div>
 
               {/* Standard Package */}
-              <div className="bg-white rounded-lg shadow-lg divide-y divide-gray-200 border-2 border-amber-700">
-                <div className="p-6">
-                  <h3 className="text-2xl font-semibold text-gray-900">
-                    Standard
-                  </h3>
-                  <p className="mt-4 text-gray-600">
-                    Ideal for regular weekly sessions
-                  </p>
-                  <p className="mt-8">
-                    <span className="text-4xl font-extrabold text-gray-900">
-                      R600
-                    </span>
-                    <span className="text-base font-medium text-gray-500">
-                      /month
-                    </span>
-                  </p>
-                  <ul className="mt-6 space-y-4">
-                    <li className="flex space-x-3">
-                      <svg
-                        className="h-5 w-5 text-amber-700"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                      <span className="text-gray-600">
-                        4 sessions per month
-                      </span>
-                    </li>
-                    <li className="flex space-x-3">
-                      <svg
-                        className="h-5 w-5 text-amber-700"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                      <span className="text-gray-600">Progress tracking</span>
-                    </li>
-                    <li className="flex space-x-3">
-                      <svg
-                        className="h-5 w-5 text-amber-700"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                      <span className="text-gray-600">
-                        Study materials included
-                      </span>
-                    </li>
-                  </ul>
+              <div className="relative bg-white p-6 rounded-lg shadow-md border-2 border-amber-500">
+                <div className="absolute -top-4 left-1/2 transform -translate-x-1/2">
+                  <span className="bg-amber-500 text-white px-4 py-1 rounded-full text-sm">
+                    Most Popular
+                  </span>
                 </div>
-                <div className="px-6 py-4">
-                  <Link
-                    href="/book?package=standard"
-                    className="block w-full text-center rounded-md bg-amber-700 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-800"
-                  >
-                    Get Standard
-                  </Link>
-                </div>
+                <h3 className="text-2xl font-bold text-gray-900">
+                  Monthly Standard
+                </h3>
+                <p className="mt-4 text-lg text-amber-700 font-bold">
+                  R700 per month
+                </p>
+                <ul className="mt-4 space-y-2 text-gray-600">
+                  <li>• Group sessions (max 3 learners)</li>
+                  <li>• 4 sessions per month</li>
+                  <li>• Online interactive learning</li>
+                  <li>• Extended homework support</li>
+                  <li>• WhatsApp support</li>
+                  <li>• Save on per-session cost</li>
+                </ul>
+                <button
+                  onClick={handleBookSession}
+                  className="mt-8 w-full bg-amber-600 text-white py-2 px-4 rounded-md hover:bg-amber-700 transition-colors"
+                >
+                  Choose Standard
+                </button>
               </div>
 
               {/* Premium Package */}
-              <div className="bg-white rounded-lg shadow-lg divide-y divide-gray-200">
-                <div className="p-6">
-                  <h3 className="text-2xl font-semibold text-gray-900">
-                    Premium
-                  </h3>
-                  <p className="mt-4 text-gray-600">
-                    Comprehensive support for optimal results
+              <div className="relative bg-white p-6 rounded-lg shadow-md border border-gray-200">
+                <h3 className="text-2xl font-bold text-gray-900">
+                  Monthly Premium
+                </h3>
+                <p className="mt-4 text-lg text-amber-700 font-bold">
+                  R1300 per month
+                </p>
+                <ul className="mt-4 space-y-2 text-gray-600">
+                  <li>• Group sessions (max 3 learners)</li>
+                  <li>• 8 sessions per month</li>
+                  <li>• Online interactive learning</li>
+                  <li>• Priority homework support</li>
+                  <li>• 24/7 WhatsApp support</li>
+                  <li>• Best value per session</li>
+                  <li>• Monthly progress reports</li>
+                </ul>
+                <button
+                  onClick={handleBookSession}
+                  className="mt-8 w-full bg-amber-600 text-white py-2 px-4 rounded-md hover:bg-amber-700 transition-colors"
+                >
+                  Choose Premium
+                </button>
+              </div>
+            </div>
+
+            {/* Additional Information */}
+            <div className="mt-12 bg-gray-50 p-6 rounded-lg">
+              <h3 className="text-xl font-bold text-gray-900 mb-4">
+                Additional Services & Information
+              </h3>
+              <div className="grid md:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="font-semibold text-amber-700">
+                    Private Sessions
+                  </h4>
+                  <p className="text-gray-600 mt-2">
+                    Looking for one-on-one attention? Contact us for private
+                    tutoring rates and availability.
                   </p>
-                  <p className="mt-8">
-                    <span className="text-4xl font-extrabold text-gray-900">
-                      R1000
-                    </span>
-                    <span className="text-base font-medium text-gray-500">
-                      /month
-                    </span>
-                  </p>
-                  <ul className="mt-6 space-y-4">
-                    <li className="flex space-x-3">
-                      <svg
-                        className="h-5 w-5 text-amber-700"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                      <span className="text-gray-600">
-                        8 sessions per month
-                      </span>
-                    </li>
-                    <li className="flex space-x-3">
-                      <svg
-                        className="h-5 w-5 text-amber-700"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                      <span className="text-gray-600">Priority scheduling</span>
-                    </li>
-                    <li className="flex space-x-3">
-                      <svg
-                        className="h-5 w-5 text-amber-700"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                      <span className="text-gray-600">
-                        Exam preparation support
-                      </span>
-                    </li>
-                    <li className="flex space-x-3">
-                      <svg
-                        className="h-5 w-5 text-amber-700"
-                        fill="none"
-                        viewBox="0 0 24 24"
-                        stroke="currentColor"
-                      >
-                        <path
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                          strokeWidth={2}
-                          d="M5 13l4 4L19 7"
-                        />
-                      </svg>
-                      <span className="text-gray-600">
-                        WhatsApp support between sessions
-                      </span>
-                    </li>
-                  </ul>
                 </div>
-                <div className="px-6 py-4">
-                  <Link
-                    href="/book?package=premium"
-                    className="block w-full text-center rounded-md bg-amber-700 px-4 py-2 text-sm font-semibold text-white hover:bg-amber-800"
-                  >
-                    Get Premium
-                  </Link>
+                <div>
+                  <h4 className="font-semibold text-amber-700">
+                    Home Tutoring
+                  </h4>
+                  <p className="text-gray-600 mt-2">
+                    Special rates available for in-home tutoring services.
+                    Contact us for a personalized quote based on your location.
+                  </p>
                 </div>
               </div>
+            </div>
+
+            {/* Important Notes */}
+            <div className="mt-8 text-gray-600">
+              <h4 className="font-semibold text-amber-700 mb-2">
+                Important Notes:
+              </h4>
+              <ul className="list-disc pl-5 space-y-2">
+                <li>
+                  All regular sessions are conducted online through our
+                  interactive learning platform
+                </li>
+                <li>
+                  Currently specializing in Pure Mathematics only - more
+                  subjects coming soon!
+                </li>
+                <li>First lesson is FREE for new signups</li>
+                <li>
+                  Group sessions are limited to 3 learners for optimal attention
+                </li>
+                <li>Contact us for custom packages or special requirements</li>
+              </ul>
             </div>
           </div>
         </div>
